@@ -62,6 +62,107 @@
         var fileInput = document.getElementById('fileUpload');
         var addBtn = document.getElementById('addDocBtn');
         var tbody = document.getElementById('documentsBody');
+        var nextDocId = 0;
+        var idToFile = {};
+
+        var DB_NAME = 'ASL_Documents';
+        var STORE_NAME = 'documents';
+        var VIEWER_STORE = 'viewer';
+
+        function openDB() {
+            return new Promise(function (resolve, reject) {
+                var r = indexedDB.open(DB_NAME, 2);
+                r.onerror = function () { reject(r.error); };
+                r.onsuccess = function () { resolve(r.result); };
+                r.onupgradeneeded = function () {
+                    var db = r.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains(VIEWER_STORE)) {
+                        db.createObjectStore(VIEWER_STORE, { keyPath: 'id' });
+                    }
+                };
+            });
+        }
+
+        // Save the document the user wants to view so the viewer
+        // page can load it after navigation.
+        function setViewerDoc(name, blob) {
+            return openDB().then(function (db) {
+                return new Promise(function (resolve, reject) {
+                    var tx = db.transaction(VIEWER_STORE, 'readwrite');
+                    tx.objectStore(VIEWER_STORE).put({ id: 'current', name: name, blob: blob });
+                    tx.oncomplete = function () { resolve(); };
+                    tx.onerror = function () { reject(tx.error); };
+                });
+            });
+        }
+
+        function saveDocToDB(id, name, size, dateStr, blob) {
+            return openDB().then(function (db) {
+                return new Promise(function (resolve, reject) {
+                    var tx = db.transaction(STORE_NAME, 'readwrite');
+                    var store = tx.objectStore(STORE_NAME);
+                    store.put({ id: id, name: name, size: size, dateAdded: dateStr, blob: blob });
+                    tx.oncomplete = function () { resolve(); };
+                    tx.onerror = function () { reject(tx.error); };
+                });
+            });
+        }
+
+        function deleteDocFromDB(id) {
+            return openDB().then(function (db) {
+                return new Promise(function (resolve, reject) {
+                    var tx = db.transaction(STORE_NAME, 'readwrite');
+                    tx.objectStore(STORE_NAME).delete(id);
+                    tx.oncomplete = function () { resolve(); };
+                    tx.onerror = function () { reject(tx.error); };
+                });
+            });
+        }
+
+        function loadDocsFromDB() {
+            return openDB().then(function (db) {
+                return new Promise(function (resolve, reject) {
+                    var tx = db.transaction(STORE_NAME, 'readonly');
+                    var req = tx.objectStore(STORE_NAME).getAll();
+                    req.onsuccess = function () { resolve(req.result || []); };
+                    req.onerror = function () { reject(req.error); };
+                });
+            });
+        }
+
+        function formatSize(size) {
+            return size < 1024 ? size + ' B' : size < 1024 * 1024 ? (size / 1024).toFixed(1) + ' KB' : (size / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function formatDate(now) {
+            return (now.getMonth() + 1) + '/' + now.getDate() + '/' + String(now.getFullYear()).slice(-2) + ' ' + (now.getHours() % 12 || 12) + ':' + String(now.getMinutes()).padStart(2, '0') + (now.getHours() >= 12 ? 'pm' : 'am');
+        }
+
+        function addRow(id, name, sizeStr, dateStr, blobOrFile) {
+            idToFile[id] = blobOrFile;
+            var tr = document.createElement('tr');
+            tr.setAttribute('data-doc-id', id);
+            tr.innerHTML = '<td class="td-select"><input type="checkbox" class="doc-checkbox" aria-label="Select row"></td><td><a href="#" class="doc-open-link" data-doc-id="' + id + '" aria-label="Open document">' + escapeHtml(name) + '</a></td><td>' + dateStr + '</td><td>' + sizeStr + '</td><td>—</td>';
+            tbody.appendChild(tr);
+        }
+
+        function escapeHtml(s) {
+            var div = document.createElement('div');
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        loadDocsFromDB().then(function (docs) {
+            docs.forEach(function (d) {
+                if (d.id >= nextDocId) nextDocId = d.id + 1;
+                addRow(d.id, d.name, formatSize(d.size), d.dateAdded, d.blob);
+            });
+        }).catch(function (err) {
+            console.error('Could not load saved documents:', err);
+        });
 
         addBtn.addEventListener('click', function () {
             fileInput.click();
@@ -72,16 +173,34 @@
             if (!files.length) return;
             for (var i = 0; i < files.length; i++) {
                 var f = files[i];
+                var id = nextDocId++;
                 var name = f.name;
                 var size = f.size;
-                var sizeStr = size < 1024 ? size + ' B' : size < 1024 * 1024 ? (size / 1024).toFixed(1) + ' KB' : (size / (1024 * 1024)).toFixed(1) + ' MB';
+                var sizeStr = formatSize(size);
                 var now = new Date();
-                var dateStr = (now.getMonth() + 1) + '/' + now.getDate() + '/' + String(now.getFullYear()).slice(-2) + ' ' + (now.getHours() % 12 || 12) + ':' + String(now.getMinutes()).padStart(2, '0') + (now.getHours() >= 12 ? 'pm' : 'am');
-                var tr = document.createElement('tr');
-                tr.innerHTML = '<td class="td-select"><input type="checkbox" class="doc-checkbox" aria-label="Select row"></td><td>' + escapeHtml(name) + '</td><td>' + dateStr + '</td><td>' + sizeStr + '</td><td>—</td>';
-                tbody.appendChild(tr);
+                var dateStr = formatDate(now);
+                addRow(id, name, sizeStr, dateStr, f);
+                saveDocToDB(id, name, size, dateStr, f).catch(function (e) {
+                    console.error('Could not save document to storage:', e);
+                });
             }
             fileInput.value = '';
+        });
+
+        tbody.addEventListener('click', function (e) {
+            var link = e.target.closest('.doc-open-link');
+            if (!link) return;
+            e.preventDefault();
+            var id = parseInt(link.getAttribute('data-doc-id'), 10);
+            var file = idToFile[id];
+            if (!file) return;
+            // Persist the file so the viewer page can load it,
+            // and navigate in the same tab.
+            setViewerDoc(file.name, file).then(function () {
+                window.location.href = 'document.html';
+            }).catch(function (err) {
+                console.error('Could not open document:', err);
+            });
         });
 
         document.getElementById('selectAll').addEventListener('change', function () {
@@ -96,14 +215,18 @@
                 var cb = tr.querySelector('.doc-checkbox');
                 if (cb && cb.checked) toRemove.push(tr);
             });
-            toRemove.forEach(function (tr) { tr.remove(); });
+            toRemove.forEach(function (tr) {
+                var id = tr.getAttribute('data-doc-id');
+                if (id != null) {
+                    var numId = parseInt(id, 10);
+                    delete idToFile[numId];
+                    deleteDocFromDB(numId).catch(function (e) {
+                        console.error('Could not remove document from storage:', e);
+                    });
+                }
+                tr.remove();
+            });
         });
-
-        function escapeHtml(s) {
-            var div = document.createElement('div');
-            div.textContent = s;
-            return div.innerHTML;
-        }
     </script>
     <script>
         (function () {
