@@ -25,8 +25,8 @@ body {
 
 .high-contrast-toggle {
     color: white;
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: 1.15rem;
+    font-weight: 700;
     font-family: inherit;
     background: none;
     border: none;
@@ -185,6 +185,9 @@ body {
     color: #1B7A4A;
     font-weight: 600;
     text-decoration: none;
+    display: inline-block;
+    padding: 0.08rem 0.28rem;
+    line-height: 1.2;
 }
 
 .form-footer a:hover {
@@ -304,7 +307,7 @@ a.icon-btn {
 }
 
 .documents-title {
-    font-size: 1.25rem;
+    font-size: 1.3rem;
     font-weight: bold;
     color: #000;
     margin: 0;
@@ -325,12 +328,12 @@ a.icon-btn {
 .documents-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.9rem;
+    font-size: 1rem;
 }
 
 .documents-table th,
 .documents-table td {
-    padding: 0.75rem 1rem;
+    padding: 0.9rem 1.2rem;
     text-align: left;
     border-bottom: 1px solid #e0e0e0;
 }
@@ -338,6 +341,7 @@ a.icon-btn {
 .documents-table th {
     background-color: #ebebeb;
     font-weight: bold;
+    font-size: 1.1rem;
     color: #000;
     position: sticky;
     top: 0;
@@ -374,12 +378,50 @@ a.icon-btn {
 
 body.high-contrast-mode .doc-open-link {
     color: #000;
+    display: inline-block;
+    padding: 0.25rem 0.4rem;
+    outline: 2px solid #000;
+}
+
+body.high-contrast-mode .doc-open-link:focus {
+    outline: 2px solid #000;
 }
 
 .documents-table .th-select input,
 .documents-table .td-select input {
+    -webkit-appearance: none;
+    appearance: none;
     margin: 0;
     cursor: pointer;
+    width: 1.7rem;
+    height: 1.7rem;
+    border: 2px solid #000;
+    border-radius: 0.35rem;
+    background: #fff;
+    display: inline-grid;
+    place-content: center;
+}
+
+.documents-table .th-select input::before,
+.documents-table .td-select input::before {
+    content: "";
+    width: 0.95rem;
+    height: 0.95rem;
+    transform: scale(0);
+    transition: transform 120ms ease-in-out;
+    background: #fff;
+    clip-path: polygon(14% 54%, 0 68%, 40% 100%, 100% 24%, 86% 10%, 40% 68%);
+}
+
+.documents-table .th-select input:checked,
+.documents-table .td-select input:checked {
+    background: #1a73e8;
+    border-color: #000;
+}
+
+.documents-table .th-select input:checked::before,
+.documents-table .td-select input:checked::before {
+    transform: scale(1);
 }
 
 /* High contrast mode */
@@ -388,9 +430,7 @@ body.high-contrast-mode .top-bar {
 }
 
 body.high-contrast-mode .login-box button,
-body.high-contrast-mode .test-box button,
-body.high-contrast-mode .icon-btn-add,
-body.high-contrast-mode .icon-btn-trash {
+body.high-contrast-mode .test-box button {
     background-color: #000;
 }
 
@@ -430,6 +470,29 @@ body.high-contrast-mode .test-box button:hover {
     color: #000;
 }
 
+.doc-file-link {
+    text-decoration: none;
+    color: #0040ff;
+}
+
+.doc-file-link:hover {
+    text-decoration: underline;
+}
+
+.doc-status-badge {
+    margin-left: auto;
+    padding: 0.35rem 0.75rem;
+    border: 2px solid #1f7f2c;
+    color: #1f7f2c;
+    font-weight: 700;
+    background: #fff;
+}
+
+.doc-status-badge.is-non-compliant {
+    border-color: #d10000;
+    color: #d10000;
+}
+
 /* Layout for the document viewer and sidebar comments */
 .document-viewer-shell {
     padding: 1.5rem;
@@ -444,15 +507,42 @@ body.high-contrast-mode .test-box button:hover {
 
 .document-card {
     flex: 1 1 auto;
+    background: #e8e8e8;
+    border: 2px solid #1a1a1a;
+    border-radius: 14px;
+    padding: 0.75rem;
+}
+
+.document-viewer-frame-wrap {
+    border-radius: 10px;
+    background-color: #f2f2f2;
+    border: 1px solid #b0b0b0;
+    padding: 0.6rem;
+}
+
+.document-viewer-frame-wrap iframe {
+    width: 100%;
+    height: 70vh;
+    border: none;
+    background-color: #fff;
+}
+
+.document-viewer-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 70vh;
+    color: #666;
+    font-size: 1rem;
 }
 
 .document-sidebar {
     width: 320px;
     flex: 0 0 320px;
-    background: #ffffff;
-    border-radius: 10px;
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.04);
-    padding: 1rem;
+    background: #e8e8e8;
+    border-radius: 14px;
+    border: 2px solid #1a1a1a;
+    padding: 0.75rem;
     display: flex;
     align-items: stretch;
 }
@@ -526,10 +616,10 @@ body.high-contrast-mode .test-box button:hover {
 }
 
 .panel {
-    background: #fff;
+    background: #efefef;
     border-radius: 8px;
-    padding: 0.75rem;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    padding: 1rem;
+    border: 2px solid #444;
 }
 
 .panel-header {
@@ -571,11 +661,12 @@ body.high-contrast-mode .test-box button:hover {
 }
 
 .issue-item {
-    background: #fbfbfb;
-    border: 1px solid #f0f0f0;
-    padding: 0.5rem;
+    background: #fff;
+    border: 1px solid #999;
+    padding: 0.7rem 0.8rem;
     border-radius: 6px;
     font-size: 0.9rem;
+    line-height: 1.35;
 }
 
 @media (max-width: 880px) {
@@ -599,26 +690,114 @@ body.high-contrast-mode .top-bar,
 body.high-contrast-mode .main-header,
 body.high-contrast-mode .login-box,
 body.high-contrast-mode .test-box,
-body.high-contrast-mode .documents-bar,
 body.high-contrast-mode .account-name,
 body.high-contrast-mode .header-search-input,
-body.high-contrast-mode .documents-title,
+body.high-contrast-mode .document-header-bar,
+body.high-contrast-mode .document-card,
+body.high-contrast-mode .document-sidebar {
+    outline: 2px solid #000;
+}
+
+body.high-contrast-mode .documents-main {
+    background: #d9d9d9;
+    padding: 1rem 1.5rem;
+}
+
+body.high-contrast-mode .documents-bar {
+    background: #e6e6e6;
+    border: 2.7px solid #000;
+    border-bottom: none;
+    border-radius: 14px 14px 0 0;
+    padding: 0.65rem 1rem;
+}
+
+body.high-contrast-mode .documents-table-wrap {
+    border: 2.7px solid #000;
+    border-top: none;
+    border-radius: 0 0 14px 14px;
+    background: #e6e6e6;
+    padding: 0.75rem;
+    max-height: calc(100vh - 250px);
+}
+
+body.high-contrast-mode .documents-table {
+    border-collapse: collapse;
+}
+
 body.high-contrast-mode .documents-table th,
 body.high-contrast-mode .documents-table td {
+    border: 2.7px solid #000;
+    background: #f3f3f3;
+}
+
+body.high-contrast-mode .documents-table tbody tr:hover {
+    background-color: #e5e5e5;
+}
+
+body.high-contrast-mode .icon-btn-add,
+body.high-contrast-mode .icon-btn-trash {
+    width: 34px;
+    height: 34px;
+    border-radius: 6px;
+    border: 1px solid #000;
+    background: #fff;
+    color: #000;
+    outline: none;
+}
+
+body.high-contrast-mode .icon-btn-add:focus,
+body.high-contrast-mode .icon-btn-trash:focus,
+body.high-contrast-mode .icon-btn-add:focus-visible,
+body.high-contrast-mode .icon-btn-trash:focus-visible {
+    outline: 1px solid #000;
+    outline-offset: 1px;
+}
+
+body.high-contrast-mode .document-header-bar {
+    background: #e6e6e6;
+    border: 1px solid #000;
+}
+
+body.high-contrast-mode .doc-file-link {
+    color: #000;
+    display: inline-block;
+    padding: 0.3rem 0.5rem;
     outline: 2px solid #000;
+}
+
+body.high-contrast-mode .doc-file-link:focus {
+    outline: 2px solid #000;
+}
+
+body.high-contrast-mode .doc-status-badge {
+    background: #fff;
+}
+
+body.high-contrast-mode .document-viewer-shell {
+    background: #d9d9d9;
+    padding-top: 0.8rem;
 }
 
 body.high-contrast-mode button,
 body.high-contrast-mode input,
 body.high-contrast-mode a,
 body.high-contrast-mode .icon-btn {
-    outline: 2px solid #000;
+    outline: 1.5px solid #000;
+}
+
+body.high-contrast-mode input[type="checkbox"] {
+    outline: none;
 }
 
 body.high-contrast-mode a:focus,
 body.high-contrast-mode button:focus,
 body.high-contrast-mode input:focus,
 body.high-contrast-mode .icon-btn:focus {
-    outline: 2px solid #000;
-    outline-offset: 1px;
+    outline: 1.5px solid #000;
+    outline-offset: 2px;
+}
+
+body.high-contrast-mode input[type="checkbox"]:focus,
+body.high-contrast-mode input[type="checkbox"]:focus-visible {
+    outline: none;
 }

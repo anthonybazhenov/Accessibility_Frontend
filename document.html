@@ -5,76 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document - City of Oakland</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        body {
-            background-color: #f5f5f5;
-        }
-
-        .document-header-bar {
-            display: flex;
-            align-items: center;
-            padding: 1rem 1.5rem;
-            background-color: #ebebeb;
-            border-bottom: 1px solid #e0e0e0;
-            font-size: 1rem;
-            font-weight: 600;
-        }
-
-        .document-header-title {
-            color: #000;
-        }
-
-        .document-viewer-shell {
-            padding: 1.5rem;
-            background-color: #f5f5f5;
-        }
-
-        .document-card {
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.08);
-            padding: 1.5rem;
-        }
-
-        .document-viewer-frame-wrap {
-            border-radius: 8px;
-            background-color: #f8f8f8;
-            padding: 1rem;
-        }
-
-        .document-viewer-frame-wrap iframe {
-            width: 100%;
-            height: 70vh;
-            border: none;
-            background-color: #fff;
-            border-radius: 6px;
-        }
-
-        .document-viewer-placeholder {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 70vh;
-            color: #666;
-            font-size: 1rem;
-        }
-
-        body.high-contrast-mode .document-header-bar {
-            outline: 2px solid #000;
-        }
-    </style>
 </head>
 <body>
     <header class="top-bar">
         <button type="button" class="high-contrast-toggle" id="highContrastToggle" aria-pressed="false">High Contrast</button>
-    </header>
-
-    <header class="main-header">
-        <div class="header-brand">
-            <img src="assets/oakland_logo.png" alt="City of Oakland" class="header-logo">
-        </div>
-        <div class="header-actions">
-        </div>
     </header>
 
     <main class="documents-main">
@@ -82,7 +16,8 @@
             <a href="test.html" class="doc-back-link" aria-label="Back to documents" title="Back to documents">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
             </a>
-            <div id="docTitle" class="document-header-title">Document</div>
+            <a href="#" id="docTitle" class="document-header-title doc-file-link" aria-label="Document name">Document</a>
+            <span id="docStatus" class="doc-status-badge">Status: Compliant</span>
         </div>
         <div class="document-viewer-shell">
             <div class="document-layout">
@@ -123,6 +58,7 @@
             var placeholder = document.getElementById('placeholder');
             var frame = document.getElementById('docFrame');
             var titleEl = document.getElementById('docTitle');
+            var statusEl = document.getElementById('docStatus');
             var DB_NAME = 'ASL_Documents';
             var VIEWER_STORE = 'viewer';
 
@@ -151,21 +87,20 @@
                 });
             }
 
-            function clearViewerDoc() {
-                return openDB().then(function (db) {
-                    return new Promise(function (resolve, reject) {
-                        var tx = db.transaction(VIEWER_STORE, 'readwrite');
-                        tx.objectStore(VIEWER_STORE).delete('current');
-                        tx.oncomplete = function () { resolve(); };
-                        tx.onerror = function () { reject(tx.error); };
-                    });
-                });
+            function getComplianceStatus(name) {
+                if (!name) return 'Compliant';
+                return /sample2|non[- ]?compliant|fail/i.test(name) ? 'Non-Compliant' : 'Compliant';
             }
 
             getViewerDoc().then(function (doc) {
                 if (doc && doc.blob) {
                     if (doc.name && titleEl) {
                         titleEl.textContent = doc.name;
+                    }
+                    if (statusEl) {
+                        var status = getComplianceStatus(doc.name);
+                        statusEl.textContent = 'Status: ' + status;
+                        statusEl.classList.toggle('is-non-compliant', status === 'Non-Compliant');
                     }
                     // Hide built-in PDF chrome where supported so the page
                     // looks like a clean document inside the card.
@@ -181,43 +116,6 @@
         })();
     </script>
     <script>
-        // Simple local save/load of accessibility comments keyed by document title
-        (function () {
-            var saveBtn = document.getElementById('saveCommentBtn');
-            var clearBtn = document.getElementById('clearCommentBtn');
-            var textarea = document.getElementById('accessComments');
-            var titleEl = document.getElementById('docTitle');
-            function storageKey() {
-                return 'accessComments:' + (titleEl ? titleEl.textContent : 'untitled');
-            }
-            function load() {
-                try {
-                    var k = storageKey();
-                    var v = localStorage.getItem(k);
-                    if (v && textarea) textarea.value = v;
-                } catch (e) { /* ignore */ }
-            }
-            function save() {
-                try {
-                    var k = storageKey();
-                    localStorage.setItem(k, textarea.value);
-                    if (saveBtn) saveBtn.textContent = 'Saved';
-                    setTimeout(function () { if (saveBtn) saveBtn.textContent = 'Save'; }, 1200);
-                } catch (e) { console.error(e); }
-            }
-            function clearComments() {
-                try {
-                    var k = storageKey();
-                    localStorage.removeItem(k);
-                    if (textarea) textarea.value = '';
-                } catch (e) { console.error(e); }
-            }
-            if (saveBtn) saveBtn.addEventListener('click', save);
-            if (clearBtn) clearBtn.addEventListener('click', function () { clearComments(); if (saveBtn) saveBtn.textContent = 'Cleared'; setTimeout(function () { if (saveBtn) saveBtn.textContent = 'Save'; }, 900); });
-            load();
-        })();
-    </script>
-    <script>
         (function () {
             var toggle = document.getElementById('highContrastToggle');
             var key = 'highContrast';
@@ -225,6 +123,7 @@
                 var on = localStorage.getItem(key) === 'true';
                 document.body.classList.toggle('high-contrast-mode', on);
                 if (toggle) toggle.setAttribute('aria-pressed', on);
+                if (toggle) toggle.textContent = on ? 'Default' : 'High Contrast';
             }
             if (toggle) {
                 toggle.addEventListener('click', function () {

@@ -145,8 +145,15 @@
             idToFile[id] = blobOrFile;
             var tr = document.createElement('tr');
             tr.setAttribute('data-doc-id', id);
-            tr.innerHTML = '<td class="td-select"><input type="checkbox" class="doc-checkbox" aria-label="Select row"></td><td><a href="#" class="doc-open-link" data-doc-id="' + id + '" aria-label="Open document">' + escapeHtml(name) + '</a></td><td>' + dateStr + '</td><td>' + sizeStr + '</td><td>—</td>';
+            var status = getComplianceStatus(name);
+            var statusClass = status === 'Non-Compliant' ? ' is-non-compliant' : '';
+            tr.innerHTML = '<td class="td-select"><input type="checkbox" class="doc-checkbox" aria-label="Select row"></td><td><a href="#" class="doc-open-link" data-doc-id="' + id + '" aria-label="Open document">' + escapeHtml(name) + '</a></td><td>' + dateStr + '</td><td>' + sizeStr + '</td><td><span class="doc-status-badge' + statusClass + '">' + status + '</span></td>';
             tbody.appendChild(tr);
+        }
+
+        function getComplianceStatus(name) {
+            if (!name) return 'Compliant';
+            return /sample2|non[- ]?compliant|fail/i.test(name) ? 'Non-Compliant' : 'Compliant';
         }
 
         function escapeHtml(s) {
@@ -236,6 +243,7 @@
                 var on = localStorage.getItem(key) === 'true';
                 document.body.classList.toggle('high-contrast-mode', on);
                 if (toggle) toggle.setAttribute('aria-pressed', on);
+                if (toggle) toggle.textContent = on ? 'Default' : 'High Contrast';
             }
             if (toggle) {
                 toggle.addEventListener('click', function () {

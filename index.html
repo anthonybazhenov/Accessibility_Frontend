@@ -73,6 +73,7 @@
                 var on = localStorage.getItem(key) === 'true';
                 document.body.classList.toggle('high-contrast-mode', on);
                 if (toggle) toggle.setAttribute('aria-pressed', on);
+                if (toggle) toggle.textContent = on ? 'High Contrast' : 'Default';
             }
             if (toggle) {
                 toggle.addEventListener('click', function () {
