@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header class="top-bar">
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <div class="top-bar">
         <button type="button" class="high-contrast-toggle" id="highContrastToggle" aria-pressed="false">High Contrast</button>
-    </header>
+    </div>
 
     <header class="main-header">
         <div class="header-brand">
@@ -20,26 +21,32 @@
         </div>
     </header>
 
-    <div class="page-content">
+    <main class="page-content" id="main-content">
         <div class="login-container">
             <div class="login-box register-box">
                 <h1>Register</h1>
                 <form id="registerForm">
                     <div class="form-group">
-                        <input type="text" id="name" placeholder="name" required>
+                        <label for="name">Full name</label>
+                        <input type="text" id="name" placeholder="name" autocomplete="name" required>
                     </div>
                     <div class="form-group">
-                        <input type="email" id="email" placeholder="email" required>
+                        <label for="email">Email</label>
+                        <input type="email" id="email" placeholder="email" autocomplete="email" required>
                     </div>
                     <div class="form-group">
-                        <input type="text" id="username" placeholder="username" required>
+                        <label for="username">Username</label>
+                        <input type="text" id="username" placeholder="username" autocomplete="username" required>
                     </div>
                     <div class="form-group">
-                        <input type="password" id="password" placeholder="password" required>
+                        <label for="password">Password</label>
+                        <input type="password" id="password" placeholder="password" autocomplete="new-password" required>
                     </div>
                     <div class="form-group">
-                        <input type="password" id="confirmPassword" placeholder="confirm password" required>
+                        <label for="confirmPassword">Confirm password</label>
+                        <input type="password" id="confirmPassword" placeholder="confirm password" autocomplete="new-password" required>
                     </div>
+                    <p id="registerFormError" class="form-error" aria-live="polite"></p>
                     <button type="submit">Create account</button>
                 </form>
                 <p class="form-footer">
@@ -47,21 +54,49 @@
                 </p>
             </div>
         </div>
-    </div>
+    </main>
 
     <script>
         document.getElementById('registerForm').addEventListener('submit', function(e) {
             e.preventDefault();
+            const name = document.getElementById('name');
+            const email = document.getElementById('email');
+            const username = document.getElementById('username');
+            const passwordEl = document.getElementById('password');
+            const confirmPasswordEl = document.getElementById('confirmPassword');
+            const errorEl = document.getElementById('registerFormError');
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
 
+            function showError(message) {
+                errorEl.textContent = message;
+            }
+
+            function clearError() {
+                errorEl.textContent = '';
+            }
+
+            [name, email, username, passwordEl, confirmPasswordEl].forEach(function (input) {
+                input.setAttribute('aria-invalid', 'false');
+            });
+
+            if (!name.value.trim() || !email.value.trim() || !username.value.trim() || !password || !confirmPassword) {
+                showError('Please fill out all required fields.');
+                [name, email, username, passwordEl, confirmPasswordEl].forEach(function (input) {
+                    if (!input.value.trim()) input.setAttribute('aria-invalid', 'true');
+                });
+                return;
+            }
+
             if (password !== confirmPassword) {
-                alert('Passwords do not match.');
+                showError('Passwords do not match.');
+                passwordEl.setAttribute('aria-invalid', 'true');
+                confirmPasswordEl.setAttribute('aria-invalid', 'true');
                 return;
             }
 
             // For now, redirect to login after "register"
-            alert('Account created. You can now log in.');
+            clearError();
             window.location.href = 'index.html';
         });
     </script>
