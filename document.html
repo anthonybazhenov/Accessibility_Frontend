@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document - City of Oakland</title>
     <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
 </head>
 <body>
     <header class="top-bar">
@@ -28,24 +29,35 @@
                     </div>
                 </div>
 
-                <aside class="document-sidebar" aria-label="Accessibility comments">
-                    <div class="panel ai-panel">
+                <aside class="document-sidebar" aria-label="Remediation report">
+                    <div class="panel alterations-panel">
                         <div class="panel-header">
                             <span class="status-circle status-green" aria-hidden="true"></span>
-                            <h4 class="panel-title">Tweaked by AI</h4>
+                            <h4 class="panel-title">What was altered</h4>
                         </div>
-                        <ul class="issue-list" id="aiIssues">
-                            <li class="issue-item">Contrast improved for headings</li>
+                        <p class="alterations-hint">Green in the document marks remediated blocks (figures, headings, paragraphs).</p>
+                        <ul class="issue-list" id="alterationsList">
+                            <li class="issue-item alteration-item">Loading…</li>
                         </ul>
                     </div>
 
                     <div class="panel manual-panel">
                         <div class="panel-header">
                             <span class="status-circle status-yellow" aria-hidden="true"></span>
-                            <h4 class="panel-title">Needs manual tweaking</h4>
+                            <h4 class="panel-title">Outstanding issues</h4>
                         </div>
                         <ul class="issue-list" id="manualIssues">
-                            <li class="issue-item">Add descriptive alt text for images</li>
+                            <li class="issue-item">—</li>
+                        </ul>
+                    </div>
+
+                    <div class="panel ai-panel">
+                        <div class="panel-header">
+                            <span class="status-circle status-green" aria-hidden="true"></span>
+                            <h4 class="panel-title">Warnings &amp; notes</h4>
+                        </div>
+                        <ul class="issue-list" id="aiIssues">
+                            <li class="issue-item">—</li>
                         </ul>
                     </div>
                 </aside>
@@ -55,12 +67,42 @@
 
     <script>
         (function () {
+            if (typeof API_BASE === 'undefined' || !API_BASE || API_BASE === 'https://your-backend-url') return;
+            consumeJwtFromUrlHash();
+            var h = authHeaders();
+            if (!h['Authorization']) {
+                window.location.href = 'index.html?auth=failed';
+                return;
+            }
+            fetch(API_BASE + '/api/person/jwt', {
+                credentials: 'include',
+                headers: h
+            })
+                .then(function (res) {
+                    if (!res.ok) {
+                        window.location.href = 'index.html?auth=failed';
+                    }
+                })
+                .catch(function () {
+                    window.location.href = 'index.html?auth=failed';
+                });
+        })();
+    </script>
+    <script>
+        (function () {
             var placeholder = document.getElementById('placeholder');
             var frame = document.getElementById('docFrame');
             var titleEl = document.getElementById('docTitle');
             var statusEl = document.getElementById('docStatus');
+            var alterationsList = document.getElementById('alterationsList');
+            var aiIssues = document.getElementById('aiIssues');
+            var manualIssues = document.getElementById('manualIssues');
             var DB_NAME = 'ASL_Documents';
             var VIEWER_STORE = 'viewer';
+
+            function apiReady() {
+                return typeof API_BASE !== 'undefined' && API_BASE && API_BASE !== 'https://your-backend-url';
+            }
 
             function openDB() {
                 return new Promise(function (resolve, reject) {
@@ -92,27 +134,136 @@
                 return /sample2|non[- ]?compliant|fail/i.test(name) ? 'Non-Compliant' : 'Compliant';
             }
 
-            getViewerDoc().then(function (doc) {
-                if (doc && doc.blob) {
-                    if (doc.name && titleEl) {
-                        titleEl.textContent = doc.name;
-                    }
-                    if (statusEl) {
-                        var status = getComplianceStatus(doc.name);
-                        statusEl.textContent = 'Status: ' + status;
-                        statusEl.classList.toggle('is-non-compliant', status === 'Non-Compliant');
-                    }
-                    // Hide built-in PDF chrome where supported so the page
-                    // looks like a clean document inside the card.
-                    var baseUrl = URL.createObjectURL(doc.blob);
-                    var viewerUrl = baseUrl + '#toolbar=0&navpanes=0&scrollbar=0';
-                    frame.src = viewerUrl;
-                    frame.style.display = 'block';
-                    placeholder.style.display = 'none';
+            function populateAlterations(report) {
+                if (!alterationsList) return;
+                alterationsList.innerHTML = '';
+                var lines = report && report.alterations && report.alterations.length
+                    ? report.alterations
+                    : [];
+                if (!lines.length) {
+                    var li0 = document.createElement('li');
+                    li0.className = 'issue-item alteration-item';
+                    li0.textContent = 'No alteration summary is available for this document.';
+                    alterationsList.appendChild(li0);
+                    return;
                 }
-            }).catch(function () {
-                placeholder.textContent = 'Could not load document.';
-            });
+                lines.forEach(function (line) {
+                    var li = document.createElement('li');
+                    li.className = 'issue-item alteration-item';
+                    li.textContent = line;
+                    alterationsList.appendChild(li);
+                });
+            }
+
+            function populateReportSidebar(report) {
+                if (!aiIssues || !manualIssues) return;
+                aiIssues.innerHTML = '';
+                manualIssues.innerHTML = '';
+                populateAlterations(report);
+                if (!report || !report.issues || !report.issues.length) {
+                    aiIssues.innerHTML = '<li class="issue-item">No warnings or notes.</li>';
+                    manualIssues.innerHTML = '<li class="issue-item">No outstanding issues.</li>';
+                    return;
+                }
+                report.issues.forEach(function (issue) {
+                    var li = document.createElement('li');
+                    li.className = 'issue-item';
+                    var text = issue.issue || issue.evidence || '';
+                    if (issue.page_number != null) text += ' (page ' + issue.page_number + ')';
+                    li.textContent = text;
+                    var sev = (issue.severity || '').toLowerCase();
+                    if (sev === 'error') {
+                        manualIssues.appendChild(li);
+                    } else {
+                        aiIssues.appendChild(li);
+                    }
+                });
+                if (!manualIssues.children.length) {
+                    manualIssues.innerHTML = '<li class="issue-item">No outstanding issues.</li>';
+                }
+                if (!aiIssues.children.length) {
+                    aiIssues.innerHTML = '<li class="issue-item">No warnings or notes.</li>';
+                }
+            }
+
+            function loadFromServer(docId) {
+                var h = authHeaders();
+                if (!h['Authorization']) {
+                    placeholder.textContent = 'Sign in to view this document.';
+                    return;
+                }
+                var base = API_BASE + '/alteredDocuments/' + encodeURIComponent(docId);
+                Promise.all([
+                    fetch(base + '/download?format=html', { credentials: 'include', headers: h })
+                        .then(function (res) {
+                            if (!res.ok) throw new Error('Could not load document');
+                            return res.blob();
+                        }),
+                    fetch(base + '/report', { credentials: 'include', headers: h })
+                        .then(function (res) {
+                            if (!res.ok) return null;
+                            return res.json();
+                        })
+                ])
+                    .then(function (results) {
+                        var blob = results[0];
+                        var report = results[1];
+                        var objectUrl = URL.createObjectURL(blob);
+                        frame.src = objectUrl;
+                        frame.style.display = 'block';
+                        placeholder.style.display = 'none';
+                        if (titleEl && report && report.filename) {
+                            titleEl.textContent = report.filename;
+                        } else if (titleEl) {
+                            titleEl.textContent = 'Document';
+                        }
+                        if (statusEl) {
+                            var label = 'Remediated';
+                            var bad = false;
+                            if (report) {
+                                if (report.errors > 0) {
+                                    label = 'Needs review';
+                                    bad = true;
+                                } else if (report.warnings > 0) {
+                                    label = 'Remediated (warnings)';
+                                }
+                            }
+                            statusEl.textContent = 'Status: ' + label;
+                            statusEl.classList.toggle('is-non-compliant', bad);
+                        }
+                        populateReportSidebar(report);
+                    })
+                    .catch(function () {
+                        placeholder.textContent = 'Could not load document from server.';
+                    });
+            }
+
+            var params = new URLSearchParams(window.location.search);
+            var serverId = params.get('id');
+
+            if (serverId && apiReady()) {
+                loadFromServer(serverId);
+            } else {
+                getViewerDoc().then(function (doc) {
+                    if (doc && doc.blob) {
+                        if (doc.name && titleEl) {
+                            titleEl.textContent = doc.name;
+                        }
+                        if (statusEl) {
+                            var status = getComplianceStatus(doc.name);
+                            statusEl.textContent = 'Status: ' + status;
+                            statusEl.classList.toggle('is-non-compliant', status === 'Non-Compliant');
+                        }
+                        var baseUrl = URL.createObjectURL(doc.blob);
+                        var viewerUrl = baseUrl + '#toolbar=0&navpanes=0&scrollbar=0';
+                        frame.src = viewerUrl;
+                        frame.style.display = 'block';
+                        placeholder.style.display = 'none';
+                    }
+                }).catch(function () {
+                    placeholder.textContent = 'Could not load document.';
+                });
+            }
         })();
     </script>
     <script>

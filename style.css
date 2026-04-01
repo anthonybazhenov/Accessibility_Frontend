@@ -204,6 +204,20 @@ html.high-contrast-mode {
     color: #777;
 }
 
+.upload-status-msg {
+    margin: 0.5rem 0 0;
+    font-size: 0.9rem;
+    max-width: 52rem;
+}
+
+.upload-status-msg.is-success {
+    color: #0a6;
+}
+
+.upload-status-msg.is-error {
+    color: #a30;
+}
+
 .register-box {
     max-width: 380px;
 }
@@ -671,6 +685,18 @@ body.high-contrast-mode .test-box button:hover {
     border-radius: 6px;
     font-size: 0.9rem;
     line-height: 1.35;
+}
+
+.alterations-hint {
+    margin: 0 0 0.65rem 0;
+    font-size: 0.82rem;
+    color: #444;
+    line-height: 1.35;
+}
+
+.alterations-panel .alteration-item {
+    border-color: #5a9d4a;
+    background: #f0f9eb;
 }
 
 @media (max-width: 880px) {

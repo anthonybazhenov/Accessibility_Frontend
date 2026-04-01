@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - City of Oakland</title>
     <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
 </head>
 <body>
     <header class="top-bar">
@@ -35,6 +36,9 @@
                         <input type="text" id="username" placeholder="username" required>
                     </div>
                     <div class="form-group">
+                        <input type="date" id="dob" required aria-label="Date of birth">
+                    </div>
+                    <div class="form-group">
                         <input type="password" id="password" placeholder="password" required>
                     </div>
                     <div class="form-group">
@@ -42,6 +46,7 @@
                     </div>
                     <button type="submit">Create account</button>
                 </form>
+                <p class="form-footer form-hint" id="registerError" role="alert" style="display: none; color: #c00;"></p>
                 <p class="form-footer">
                     Already have an account? <a href="index.html">Log in</a>
                 </p>
@@ -50,20 +55,94 @@
     </div>
 
     <script>
-        document.getElementById('registerForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
+        (function () {
+            var form = document.getElementById('registerForm');
+            var submitBtn = form.querySelector('button[type="submit"]');
+            var errorEl = document.getElementById('registerError');
 
-            if (password !== confirmPassword) {
-                alert('Passwords do not match.');
-                return;
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var password = document.getElementById('password').value;
+                var confirmPassword = document.getElementById('confirmPassword').value;
+
+                if (password !== confirmPassword) {
+                    showError('Passwords do not match.');
+                    return;
+                }
+
+                if (!API_BASE || API_BASE === 'https://your-backend-url') {
+                    showError('Configure API_BASE in config.js');
+                    return;
+                }
+
+                var name = document.getElementById('name').value.trim();
+                var email = document.getElementById('email').value.trim();
+                var username = document.getElementById('username').value.trim();
+                var dobInput = document.getElementById('dob').value;
+
+                if (!name || !email || !username || !password || !dobInput) {
+                    showError('Please fill in all fields.');
+                    return;
+                }
+
+                // Convert yyyy-mm-dd to MM-dd-yyyy for backend
+                var dobParts = dobInput.split('-');
+                var dobStr = dobParts[1] + '-' + dobParts[2] + '-' + dobParts[0];
+
+                setLoading(true);
+                hideError();
+
+                var params = new URLSearchParams({
+                    email: email,
+                    password: password,
+                    name: name,
+                    username: username,
+                    dob: dobStr
+                });
+
+                fetch(API_BASE + '/api/person/post?' + params.toString(), {
+                    method: 'POST',
+                    credentials: 'include'
+                })
+                    .then(function (res) {
+                        if (res.ok) {
+                            window.location.href = 'index.html';
+                        } else {
+                            return res.text().then(function (text) {
+                                throw new Error(text || 'Registration failed');
+                            });
+                        }
+                    })
+                    .catch(function (err) {
+                        setLoading(false);
+                        var msg = err.message || '';
+                        if (msg.toLowerCase().indexOf('fetch') !== -1 || msg.toLowerCase().indexOf('load') !== -1 || msg === 'Failed to fetch') {
+                            showError('Cannot reach server. Is the backend running at ' + API_BASE + '? Check config.js.');
+                        } else {
+                            showError(msg || 'Registration failed. Please try again.');
+                        }
+                    });
+            });
+
+            function setLoading(loading) {
+                submitBtn.disabled = loading;
+                submitBtn.textContent = loading ? 'Creating account…' : 'Create account';
             }
 
-            // For now, redirect to login after "register"
-            alert('Account created. You can now log in.');
-            window.location.href = 'index.html';
-        });
+            function showError(msg) {
+                if (errorEl) {
+                    errorEl.textContent = msg;
+                    errorEl.style.display = 'block';
+                }
+            }
+
+            function hideError() {
+                if (errorEl) {
+                    errorEl.textContent = '';
+                    errorEl.style.display = 'none';
+                }
+            }
+        })();
     </script>
     <script>
         (function () {

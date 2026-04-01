@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - City of Oakland</title>
     <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
 </head>
 <body>
     <header class="top-bar">
@@ -33,9 +34,7 @@
                     </div>
                     <button type="submit">Login</button>
                 </form>
-                <p class="form-footer form-hint">
-                    Test login: <strong>test</strong> / <strong>test</strong>
-                </p>
+                <p class="form-footer form-hint" id="loginError" role="alert" style="display: none; color: #c00;"></p>
                 <p class="form-footer">
                     Don't have an account? <a href="register.html">Register</a>
                 </p>
@@ -44,26 +43,117 @@
     </div>
 
     <script>
-        // Temporary test login (remove when real auth is added)
-        const TEST_USERNAME = 'test';
-        const TEST_PASSWORD = 'test';
+        (function () {
+            try {
+                var q = new URLSearchParams(window.location.search);
+                if (q.get('auth') === 'failed') {
+                    var el = document.getElementById('loginError');
+                    if (el) {
+                        el.textContent = 'Could not verify your session on the dashboard. Try logging in again.';
+                        el.style.display = 'block';
+                    }
+                }
+            } catch (e) {}
+        })();
+    </script>
+    <script>
+        (function () {
+            var form = document.getElementById('loginForm');
+            var submitBtn = form.querySelector('button[type="submit"]');
+            var errorEl = document.getElementById('loginError');
 
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var username = document.getElementById('username').value.trim();
+                var password = document.getElementById('password').value;
 
-            if (!username || !password) {
-                alert('Please enter both username and password');
-                return;
+                if (!username || !password) {
+                    showError('Please enter both username and password');
+                    return;
+                }
+
+                if (!API_BASE || API_BASE === 'https://your-backend-url') {
+                    showError('Configure API_BASE in config.js');
+                    return;
+                }
+
+                setLoading(true);
+                hideError();
+
+                fetch(API_BASE + '/authenticate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ username: username, password: password })
+                })
+                    .then(function (res) {
+                        if (!res.ok) {
+                            return res.text().then(function (text) {
+                                throw new Error(text || 'Login failed');
+                            });
+                        }
+                        var hdrToken = res.headers.get('X-JWT-Token') || res.headers.get('x-jwt-token');
+                        function finishLogin(token) {
+                            if (!token) {
+                                setLoading(false);
+                                showError('Login succeeded on the server but the browser did not receive a token. Hard-refresh (Cmd+Shift+R) and try again. API_BASE: ' + API_BASE);
+                                return;
+                            }
+                            setStoredJwt(token);
+                            // Hash carries token even if storage is flaky across navigation
+                            window.location.href = 'test.html#asl_token=' + encodeURIComponent(token);
+                        }
+                        return res.clone().json().then(function (data) {
+                            var token = hdrToken || (data && (data.token || data.access_token));
+                            finishLogin(token);
+                        }).catch(function () {
+                            return res.text().then(function (text) {
+                                var token = hdrToken;
+                                if (!token && text) {
+                                    try {
+                                        var data = JSON.parse(text);
+                                        if (data && data.token) token = data.token;
+                                    } catch (e) {}
+                                }
+                                if (!token && text) {
+                                    var m = text.match(/"token"\s*:\s*"([^"]+)"/);
+                                    if (m) token = m[1];
+                                }
+                                finishLogin(token);
+                            });
+                        });
+                    })
+                    .catch(function (err) {
+                        setLoading(false);
+                        if (err.message && (err.message.toLowerCase().indexOf('invalid') !== -1 || err.message.indexOf('credentials') !== -1)) {
+                            showError('Invalid username or password');
+                        } else if (err.message && (err.message.toLowerCase().indexOf('fetch') !== -1 || err.message.toLowerCase().indexOf('load') !== -1 || err.message === 'Failed to fetch')) {
+                            showError('Cannot reach server. Check config.js and that the backend is running at ' + API_BASE + '.');
+                        } else {
+                            showError('Login failed. Please try again.');
+                        }
+                    });
+            });
+
+            function setLoading(loading) {
+                submitBtn.disabled = loading;
+                submitBtn.textContent = loading ? 'Logging in…' : 'Login';
             }
 
-            if (username === TEST_USERNAME && password === TEST_PASSWORD) {
-                window.location.href = 'test.html';
-            } else {
-                alert('Invalid username or password');
+            function showError(msg) {
+                if (errorEl) {
+                    errorEl.textContent = msg;
+                    errorEl.style.display = 'block';
+                }
             }
-        });
+
+            function hideError() {
+                if (errorEl) {
+                    errorEl.textContent = '';
+                    errorEl.style.display = 'none';
+                }
+            }
+        })();
     </script>
     <script>
         (function () {
