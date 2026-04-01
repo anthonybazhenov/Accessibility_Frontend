@@ -6,51 +6,53 @@
     <title>Your Documents - City of Oakland</title>
     <link rel="stylesheet" href="style.css">
     <script src="config.js"></script>
+    <script src="backend.js"></script>
 </head>
 <body>
-    <header class="top-bar">
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <div class="top-bar">
         <button type="button" class="high-contrast-toggle" id="highContrastToggle" aria-pressed="false">High Contrast</button>
-    </header>
+    </div>
 
     <header class="main-header">
         <div class="header-brand">
             <img src="assets/oakland_logo.png" alt="City of Oakland" class="header-logo">
         </div>
         <div class="header-actions">
-            <span class="account-name">Test Test</span>
+            <span class="account-name"><span class="visually-hidden">Logged in as: </span>Test Test</span>
             <button type="button" class="icon-btn" aria-label="Menu" title="Menu">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                <svg aria-hidden="true" focusable="false" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
             </button>
-            <a href="index.html" class="icon-btn" aria-label="Logout" title="Logout" onclick="clearStoredJwt();">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <a href="index.html" class="icon-btn" aria-label="Logout" title="Logout">
+                <svg aria-hidden="true" focusable="false" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             </a>
         </div>
     </header>
 
-    <main class="documents-main">
+    <main class="documents-main" id="main-content">
         <div class="documents-bar">
-            <h2 class="documents-title">Your Documents</h2>
+            <h1 class="documents-title">Your Documents</h1>
             <div class="documents-actions">
-                <input type="file" id="fileUpload" accept=".pdf,application/pdf" multiple hidden>
+                <input type="file" id="fileUpload" accept=".pdf,.doc,.docx" multiple hidden>
                 <button type="button" class="icon-btn icon-btn-add" id="addDocBtn" aria-label="Upload document" title="Upload document">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <svg aria-hidden="true" focusable="false" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </button>
                 <button type="button" class="icon-btn icon-btn-trash" id="deleteDocBtn" aria-label="Delete selected" title="Delete selected">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    <svg aria-hidden="true" focusable="false" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </button>
             </div>
         </div>
-        <p id="uploadStatus" class="upload-status-msg" role="status" aria-live="polite" hidden></p>
 
         <div class="documents-table-wrap">
             <table class="documents-table">
+                <caption class="visually-hidden">Your uploaded documents</caption>
                 <thead>
                     <tr>
-                        <th class="th-select"><input type="checkbox" id="selectAll" aria-label="Select all"></th>
-                        <th>Document Name</th>
-                        <th>Date Added</th>
-                        <th>Size</th>
-                        <th>Status</th>
+                        <th class="th-select" scope="col"><input type="checkbox" id="selectAll" aria-label="Select all"></th>
+                        <th scope="col">Document Name</th>
+                        <th scope="col">Date Added</th>
+                        <th scope="col">Size</th>
+                        <th scope="col">Status</th>
                     </tr>
                 </thead>
                 <tbody id="documentsBody">
@@ -61,54 +63,16 @@
     </main>
 
     <script>
-        (function () {
-            if (typeof API_BASE === 'undefined' || !API_BASE || API_BASE === 'https://your-backend-url') {
-                return;
-            }
-            consumeJwtFromUrlHash();
-            var headers = authHeaders();
-            if (!headers['Authorization']) {
-                window.location.href = 'index.html?auth=failed';
-                return;
-            }
-            fetch(API_BASE + '/api/person/jwt', {
-                credentials: 'include',
-                headers: headers
-            })
-                .then(function (res) {
-                    if (!res.ok) {
-                        window.location.href = 'index.html?auth=failed';
-                        return;
-                    }
-                    return res.json().then(function (person) {
-                        var nameEl = document.querySelector('.account-name');
-                        if (nameEl && person && person.name) {
-                            nameEl.textContent = person.name;
-                        }
-                        if (typeof window.refreshDocumentTable === 'function') {
-                            window.refreshDocumentTable();
-                        }
-                    });
-                })
-                .catch(function () {
-                    window.location.href = 'index.html?auth=failed';
-                });
-        })();
-    </script>
-    <script>
         var fileInput = document.getElementById('fileUpload');
         var addBtn = document.getElementById('addDocBtn');
         var tbody = document.getElementById('documentsBody');
+        var selectAll = document.getElementById('selectAll');
         var nextDocId = 0;
         var idToFile = {};
 
         var DB_NAME = 'ASL_Documents';
         var STORE_NAME = 'documents';
         var VIEWER_STORE = 'viewer';
-
-        function apiReady() {
-            return typeof API_BASE !== 'undefined' && API_BASE && API_BASE !== 'https://your-backend-url';
-        }
 
         function openDB() {
             return new Promise(function (resolve, reject) {
@@ -127,6 +91,8 @@
             });
         }
 
+        // Save the document the user wants to view so the viewer
+        // page can load it after navigation.
         function setViewerDoc(name, blob) {
             return openDB().then(function (db) {
                 return new Promise(function (resolve, reject) {
@@ -180,53 +146,33 @@
             return (now.getMonth() + 1) + '/' + now.getDate() + '/' + String(now.getFullYear()).slice(-2) + ' ' + (now.getHours() % 12 || 12) + ':' + String(now.getMinutes()).padStart(2, '0') + (now.getHours() >= 12 ? 'pm' : 'am');
         }
 
-        function formatServerTimestamp(ts) {
-            if (!ts) return formatDate(new Date());
-            if (typeof ts === 'string') {
-                var d = new Date(ts);
-                return isNaN(d.getTime()) ? formatDate(new Date()) : formatDate(d);
-            }
-            if (Array.isArray(ts) && ts.length >= 3) {
-                var mo = ts[1];
-                if (mo > 0 && mo <= 12) mo -= 1;
-                var d2 = new Date(ts[0], mo, ts[2], ts[3] || 0, ts[4] || 0, ts[5] || 0);
-                return formatDate(d2);
-            }
-            return formatDate(new Date());
-        }
-
-        function displayStatusFromApi(status) {
-            if (!status) return { text: '—', nonCompliant: false };
-            if (status === 'FAILED') return { text: 'Failed', nonCompliant: true };
-            if (status === 'NEEDS_REVIEW') return { text: 'Needs review', nonCompliant: true };
-            if (status === 'REMEDIATED') return { text: 'Remediated', nonCompliant: false };
-            if (status === 'REMEDIATED_WITH_WARNINGS') return { text: 'Remediated (warnings)', nonCompliant: false };
-            return { text: status.replace(/_/g, ' '), nonCompliant: false };
-        }
-
-        function addLocalRow(id, name, sizeStr, dateStr, blobOrFile) {
+        function addRow(id, name, sizeStr, dateStr, blobOrFile) {
             idToFile[id] = blobOrFile;
             var tr = document.createElement('tr');
             tr.setAttribute('data-doc-id', id);
-            tr.setAttribute('data-server', '0');
             var status = getComplianceStatus(name);
             var statusClass = status === 'Non-Compliant' ? ' is-non-compliant' : '';
-            tr.innerHTML = '<td class="td-select"><input type="checkbox" class="doc-checkbox" aria-label="Select row"></td><td><a href="#" class="doc-open-link" data-doc-id="' + id + '" data-server="0" aria-label="Open document">' + escapeHtml(name) + '</a></td><td>' + dateStr + '</td><td>' + sizeStr + '</td><td><span class="doc-status-badge' + statusClass + '">' + status + '</span> <span class="doc-local-hint" title="Not sent to the backend">(browser only)</span></td>';
-            tr.setAttribute('title', 'This file is stored only in your browser, not on the server. Set API_BASE in config.js and upload while logged in to send PDFs to the backend.');
+            var safeNameForText = escapeHtml(name);
+            var safeNameForAttr = escapeAttr(name);
+            tr.innerHTML = '<td class="td-select"><input type="checkbox" class="doc-checkbox" aria-label="Select ' + safeNameForAttr + '"></td><td><a href="javascript:void(0)" class="doc-open-link" data-doc-id="' + id + '" aria-label="Open ' + safeNameForAttr + '">' + safeNameForText + '</a></td><td>' + dateStr + '</td><td>' + sizeStr + '</td><td><span class="doc-status-badge' + statusClass + '">' + status + '</span></td>';
             tbody.appendChild(tr);
+            updateSelectAllState();
         }
 
-        function addServerRow(doc) {
-            var id = doc.id;
-            var name = doc.originalFilename || 'Document';
-            var dateStr = formatServerTimestamp(doc.timestamp);
-            var disp = displayStatusFromApi(doc.status);
-            var statusClass = disp.nonCompliant ? ' is-non-compliant' : '';
-            var tr = document.createElement('tr');
-            tr.setAttribute('data-doc-id', id);
-            tr.setAttribute('data-server', '1');
-            tr.innerHTML = '<td class="td-select"><input type="checkbox" class="doc-checkbox" aria-label="Select row"></td><td><a href="#" class="doc-open-link" data-doc-id="' + id + '" data-server="1" aria-label="Open document">' + escapeHtml(name) + '</a></td><td>' + dateStr + '</td><td>—</td><td><span class="doc-status-badge' + statusClass + '">' + escapeHtml(disp.text) + '</span></td>';
-            tbody.appendChild(tr);
+        function updateSelectAllState() {
+            var checkboxes = tbody.querySelectorAll('.doc-checkbox');
+            var checked = tbody.querySelectorAll('.doc-checkbox:checked');
+            var total = checkboxes.length;
+            var selected = checked.length;
+
+            if (total === 0) {
+                selectAll.checked = false;
+                selectAll.indeterminate = false;
+                return;
+            }
+
+            selectAll.checked = selected === total;
+            selectAll.indeterminate = selected > 0 && selected < total;
         }
 
         function getComplianceStatus(name) {
@@ -240,184 +186,56 @@
             return div.innerHTML;
         }
 
-        function clearTable() {
-            tbody.innerHTML = '';
-            idToFile = {};
+        function escapeAttr(s) {
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
         }
 
-        function setUploadStatus(message, success) {
-            var el = document.getElementById('uploadStatus');
-            if (!el) return;
-            if (!message) {
-                el.textContent = '';
-                el.hidden = true;
-                el.className = 'upload-status-msg';
-                return;
-            }
-            el.textContent = message;
-            el.hidden = false;
-            el.className = 'upload-status-msg' + (success === false ? ' is-error' : ' is-success');
-        }
-
-        window.refreshDocumentTable = function () {
-            if (!apiReady()) {
-                return Promise.resolve([]);
-            }
-            return fetch(API_BASE + '/alteredDocuments', {
-                credentials: 'include',
-                headers: authHeaders()
-            })
-                .then(function (res) {
-                    if (!res.ok) throw new Error('HTTP ' + res.status);
-                    return res.json();
-                })
-                .then(function (list) {
-                    clearTable();
-                    nextDocId = 0;
-                    list.forEach(function (doc) {
-                        addServerRow(doc);
-                    });
-                    return list;
-                })
-                .catch(function (err) {
-                    console.error('Could not load documents from server:', err);
-                    return [];
-                });
-        };
-
-        if (apiReady()) {
-            /* Table filled by refreshDocumentTable() after JWT check in first script */
-        } else {
-            loadDocsFromDB().then(function (docs) {
-                docs.forEach(function (d) {
-                    if (d.id >= nextDocId) nextDocId = d.id + 1;
-                    addLocalRow(d.id, d.name, formatSize(d.size), d.dateAdded, d.blob);
-                });
-            }).catch(function (err) {
-                console.error('Could not load saved documents:', err);
+        loadDocsFromDB().then(function (docs) {
+            docs.forEach(function (d) {
+                if (d.id >= nextDocId) nextDocId = d.id + 1;
+                addRow(d.id, d.name, formatSize(d.size), d.dateAdded, d.blob);
             });
-        }
+        }).catch(function (err) {
+            console.error('Could not load saved documents:', err);
+        });
 
         addBtn.addEventListener('click', function () {
-            if (addBtn.getAttribute('aria-busy') === 'true') return;
             fileInput.click();
         });
 
         fileInput.addEventListener('change', function () {
             var files = fileInput.files;
             if (!files.length) return;
-            setUploadStatus('');
-
-            function uploadPdfToBackend(file) {
-                var fd = new FormData();
-                fd.append('file', file, file.name);
-                var auth = authHeaders();
-                var headers = {};
-                if (auth['Authorization']) headers['Authorization'] = auth['Authorization'];
-                return fetch(API_BASE + '/inputDocuments', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: headers,
-                    body: fd
-                }).then(function (res) {
-                    var ct = (res.headers.get('content-type') || '').toLowerCase();
-                    var parseBody = ct.indexOf('application/json') !== -1
-                        ? res.json()
-                        : res.text().then(function (t) {
-                            try {
-                                return JSON.parse(t);
-                            } catch (e) {
-                                return { error: t || ('HTTP ' + res.status) };
-                            }
-                        });
-                    return parseBody.then(function (body) {
-                        if (!res.ok) {
-                            var msg = (body && body.error) ? body.error : ('HTTP ' + res.status);
-                            throw new Error(msg);
-                        }
-                        return body;
-                    });
+            for (var i = 0; i < files.length; i++) {
+                var f = files[i];
+                var id = nextDocId++;
+                var name = f.name;
+                var size = f.size;
+                var sizeStr = formatSize(size);
+                var now = new Date();
+                var dateStr = formatDate(now);
+                addRow(id, name, sizeStr, dateStr, f);
+                saveDocToDB(id, name, size, dateStr, f).catch(function (e) {
+                    console.error('Could not save document to storage:', e);
                 });
             }
-
-            function processOne(i) {
-                if (i >= files.length) {
-                    fileInput.value = '';
-                    addBtn.disabled = false;
-                    addBtn.setAttribute('aria-busy', 'false');
-                    return;
-                }
-                var f = files[i];
-                var lower = (f.name || '').toLowerCase();
-                if (!lower.endsWith('.pdf')) {
-                    alert('Only PDF files are sent to the accessibility service. Skipped: ' + f.name);
-                    processOne(i + 1);
-                    return;
-                }
-
-                if (getStoredJwt() && !apiReady()) {
-                    alert('Backend URL is not set. Open config.js and set API_BASE to your Spring server (e.g. http://localhost:8085), then reload this page. Your file was not sent to the server.');
-                    processOne(i + 1);
-                    return;
-                }
-
-                if (apiReady()) {
-                    addBtn.disabled = true;
-                    addBtn.setAttribute('aria-busy', 'true');
-                    uploadPdfToBackend(f)
-                        .then(function (body) {
-                            return window.refreshDocumentTable().then(function (list) {
-                                if (body && body.documentId != null && list && !list.some(function (d) { return String(d.id) === String(body.documentId); })) {
-                                    addServerRow({
-                                        id: body.documentId,
-                                        originalFilename: body.filename || f.name,
-                                        status: body.status,
-                                        timestamp: new Date().toISOString()
-                                    });
-                                }
-                                var label = body.filename || f.name || 'file';
-                                var st = body.status ? ' — ' + String(body.status).replace(/_/g, ' ') : '';
-                                setUploadStatus('Successfully uploaded: ' + label + st + '.', true);
-                            });
-                        })
-                        .then(function () {
-                            processOne(i + 1);
-                        })
-                        .catch(function (err) {
-                            var msg = err && err.message ? err.message : String(err);
-                            setUploadStatus('Upload failed: ' + msg, false);
-                            alert('Upload failed: ' + msg);
-                            processOne(i + 1);
-                        });
-                } else {
-                    var id = nextDocId++;
-                    var name = f.name;
-                    var sizeStr = formatSize(f.size);
-                    var dateStr = formatDate(new Date());
-                    addLocalRow(id, name, sizeStr, dateStr, f);
-                    setUploadStatus('Saved in this browser: ' + name + ' (not sent to the server).', true);
-                    saveDocToDB(id, name, f.size, dateStr, f).catch(function (e) {
-                        console.error('Could not save document to storage:', e);
-                    });
-                    processOne(i + 1);
-                }
-            }
-
-            processOne(0);
+            fileInput.value = '';
         });
 
         tbody.addEventListener('click', function (e) {
             var link = e.target.closest('.doc-open-link');
             if (!link) return;
             e.preventDefault();
-            var server = link.getAttribute('data-server') === '1';
             var id = parseInt(link.getAttribute('data-doc-id'), 10);
-            if (server) {
-                window.location.href = 'document.html?id=' + encodeURIComponent(id);
-                return;
-            }
             var file = idToFile[id];
             if (!file) return;
+            // Persist the file so the viewer page can load it,
+            // and navigate in the same tab.
             setViewerDoc(file.name, file).then(function () {
                 window.location.href = 'document.html';
             }).catch(function (err) {
@@ -428,6 +246,13 @@
         document.getElementById('selectAll').addEventListener('change', function () {
             var check = this.checked;
             tbody.querySelectorAll('.doc-checkbox').forEach(function (cb) { cb.checked = check; });
+            updateSelectAllState();
+        });
+
+        tbody.addEventListener('change', function (e) {
+            if (e.target && e.target.classList.contains('doc-checkbox')) {
+                updateSelectAllState();
+            }
         });
 
         document.getElementById('deleteDocBtn').addEventListener('click', function () {
@@ -438,9 +263,8 @@
                 if (cb && cb.checked) toRemove.push(tr);
             });
             toRemove.forEach(function (tr) {
-                var server = tr.getAttribute('data-server') === '1';
                 var id = tr.getAttribute('data-doc-id');
-                if (!server && id != null) {
+                if (id != null) {
                     var numId = parseInt(id, 10);
                     delete idToFile[numId];
                     deleteDocFromDB(numId).catch(function (e) {
@@ -449,6 +273,7 @@
                 }
                 tr.remove();
             });
+            updateSelectAllState();
         });
     </script>
     <script>

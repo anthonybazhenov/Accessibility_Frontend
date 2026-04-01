@@ -6,11 +6,13 @@
     <title>Login - City of Oakland</title>
     <link rel="stylesheet" href="style.css">
     <script src="config.js"></script>
+    <script src="backend.js"></script>
 </head>
 <body>
-    <header class="top-bar">
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <div class="top-bar">
         <button type="button" class="high-contrast-toggle" id="highContrastToggle" aria-pressed="false">High Contrast</button>
-    </header>
+    </div>
 
     <header class="main-header">
         <div class="header-brand">
@@ -21,139 +23,72 @@
         </div>
     </header>
 
-    <div class="page-content">
+    <main class="page-content" id="main-content">
         <div class="login-container">
             <div class="login-box">
                 <h1>Login</h1>
                 <form id="loginForm">
                     <div class="form-group">
-                        <input type="text" id="username" placeholder="username" required>
+                        <label for="username">Username</label>
+                        <input type="text" id="username" placeholder="username" autocomplete="username" required>
                     </div>
                     <div class="form-group">
-                        <input type="password" id="password" placeholder="password" required>
+                        <label for="password">Password</label>
+                        <input type="password" id="password" placeholder="password" autocomplete="current-password" required>
                     </div>
+                    <p id="loginFormError" class="form-error" aria-live="polite"></p>
                     <button type="submit">Login</button>
                 </form>
-                <p class="form-footer form-hint" id="loginError" role="alert" style="display: none; color: #c00;"></p>
+                <p class="form-footer form-hint">
+                    Test login: <strong>test</strong> / <strong>test</strong>
+                </p>
                 <p class="form-footer">
                     Don't have an account? <a href="register.html">Register</a>
                 </p>
             </div>
         </div>
-    </div>
+    </main>
 
     <script>
-        (function () {
-            try {
-                var q = new URLSearchParams(window.location.search);
-                if (q.get('auth') === 'failed') {
-                    var el = document.getElementById('loginError');
-                    if (el) {
-                        el.textContent = 'Could not verify your session on the dashboard. Try logging in again.';
-                        el.style.display = 'block';
-                    }
-                }
-            } catch (e) {}
-        })();
-    </script>
-    <script>
-        (function () {
-            var form = document.getElementById('loginForm');
-            var submitBtn = form.querySelector('button[type="submit"]');
-            var errorEl = document.getElementById('loginError');
+        // Temporary test login (remove when real auth is added)
+        const TEST_USERNAME = 'test';
+        const TEST_PASSWORD = 'test';
 
-            form.addEventListener('submit', function (e) {
-                e.preventDefault();
-                var username = document.getElementById('username').value.trim();
-                var password = document.getElementById('password').value;
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const errorEl = document.getElementById('loginFormError');
 
-                if (!username || !password) {
-                    showError('Please enter both username and password');
-                    return;
-                }
-
-                if (!API_BASE || API_BASE === 'https://your-backend-url') {
-                    showError('Configure API_BASE in config.js');
-                    return;
-                }
-
-                setLoading(true);
-                hideError();
-
-                fetch(API_BASE + '/authenticate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ username: username, password: password })
-                })
-                    .then(function (res) {
-                        if (!res.ok) {
-                            return res.text().then(function (text) {
-                                throw new Error(text || 'Login failed');
-                            });
-                        }
-                        var hdrToken = res.headers.get('X-JWT-Token') || res.headers.get('x-jwt-token');
-                        function finishLogin(token) {
-                            if (!token) {
-                                setLoading(false);
-                                showError('Login succeeded on the server but the browser did not receive a token. Hard-refresh (Cmd+Shift+R) and try again. API_BASE: ' + API_BASE);
-                                return;
-                            }
-                            setStoredJwt(token);
-                            // Hash carries token even if storage is flaky across navigation
-                            window.location.href = 'test.html#asl_token=' + encodeURIComponent(token);
-                        }
-                        return res.clone().json().then(function (data) {
-                            var token = hdrToken || (data && (data.token || data.access_token));
-                            finishLogin(token);
-                        }).catch(function () {
-                            return res.text().then(function (text) {
-                                var token = hdrToken;
-                                if (!token && text) {
-                                    try {
-                                        var data = JSON.parse(text);
-                                        if (data && data.token) token = data.token;
-                                    } catch (e) {}
-                                }
-                                if (!token && text) {
-                                    var m = text.match(/"token"\s*:\s*"([^"]+)"/);
-                                    if (m) token = m[1];
-                                }
-                                finishLogin(token);
-                            });
-                        });
-                    })
-                    .catch(function (err) {
-                        setLoading(false);
-                        if (err.message && (err.message.toLowerCase().indexOf('invalid') !== -1 || err.message.indexOf('credentials') !== -1)) {
-                            showError('Invalid username or password');
-                        } else if (err.message && (err.message.toLowerCase().indexOf('fetch') !== -1 || err.message.toLowerCase().indexOf('load') !== -1 || err.message === 'Failed to fetch')) {
-                            showError('Cannot reach server. Check config.js and that the backend is running at ' + API_BASE + '.');
-                        } else {
-                            showError('Login failed. Please try again.');
-                        }
-                    });
-            });
-
-            function setLoading(loading) {
-                submitBtn.disabled = loading;
-                submitBtn.textContent = loading ? 'Logging in…' : 'Login';
+            function showError(message) {
+                errorEl.textContent = message;
             }
 
-            function showError(msg) {
-                if (errorEl) {
-                    errorEl.textContent = msg;
-                    errorEl.style.display = 'block';
-                }
+            function clearError() {
+                errorEl.textContent = '';
             }
 
-            function hideError() {
-                if (errorEl) {
-                    errorEl.textContent = '';
-                    errorEl.style.display = 'none';
-                }
+            usernameInput.setAttribute('aria-invalid', 'false');
+            passwordInput.setAttribute('aria-invalid', 'false');
+
+            if (!username || !password) {
+                showError('Please enter both username and password.');
+                if (!username) usernameInput.setAttribute('aria-invalid', 'true');
+                if (!password) passwordInput.setAttribute('aria-invalid', 'true');
+                return;
             }
-        })();
+
+            if (username === TEST_USERNAME && password === TEST_PASSWORD) {
+                clearError();
+                window.location.href = 'test.html';
+            } else {
+                showError('Invalid username or password.');
+                usernameInput.setAttribute('aria-invalid', 'true');
+                passwordInput.setAttribute('aria-invalid', 'true');
+            }
+        });
     </script>
     <script>
         (function () {
