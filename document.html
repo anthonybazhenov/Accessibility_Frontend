@@ -17,9 +17,16 @@
             <a href="test.html" class="doc-back-link" aria-label="Back to documents" title="Back to documents">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
             </a>
-            <a href="#" id="docTitle" class="document-header-title doc-file-link" aria-label="Document name">Document</a>
+            <span id="docTitle" class="document-header-title">Document</span>
+            <div class="document-header-actions" id="serverDownloadActions" hidden>
+                <button type="button" class="doc-download-btn" id="downloadHtmlBtn">Download HTML</button>
+                <button type="button" class="doc-download-btn doc-download-btn-secondary" id="downloadPdfBtn" disabled title="Remediated PDF is not generated for this document yet">Download PDF</button>
+            </div>
             <span id="docStatus" class="doc-status-badge">Status: Compliant</span>
         </div>
+        <p class="document-viewer-hint" id="viewerHint" hidden>
+            This page shows a semantic HTML version built from your PDF text and images (not a pixel-perfect copy of the original layout). OpenAI is used for image descriptions; it does not affect how body text is laid out.
+        </p>
         <div class="document-viewer-shell">
             <div class="document-layout">
                 <div class="document-card">
@@ -99,9 +106,87 @@
             var manualIssues = document.getElementById('manualIssues');
             var DB_NAME = 'ASL_Documents';
             var VIEWER_STORE = 'viewer';
+            var params = new URLSearchParams(window.location.search);
+            var serverId = params.get('id');
 
             function apiReady() {
                 return typeof API_BASE !== 'undefined' && API_BASE && API_BASE !== 'https://your-backend-url';
+            }
+
+            function parseFilenameFromContentDisposition(header) {
+                if (!header) return null;
+                var star = /filename\*=UTF-8''([^;\n]+)/i.exec(header);
+                if (star) {
+                    try {
+                        return decodeURIComponent(star[1].trim());
+                    } catch (e) {
+                        return star[1].trim();
+                    }
+                }
+                var m = /filename="([^"]+)"/i.exec(header);
+                if (m) return m[1];
+                m = /filename=([^;\n]+)/i.exec(header);
+                if (m) return m[1].replace(/^"|"$/g, '').trim();
+                return null;
+            }
+
+            function downloadRemediated(format, docId) {
+                var h = authHeaders();
+                if (!h['Authorization']) {
+                    alert('Sign in to download.');
+                    return;
+                }
+                var url = API_BASE + '/alteredDocuments/' + encodeURIComponent(docId) + '/download?format=' + encodeURIComponent(format);
+                fetch(url, { credentials: 'include', headers: h })
+                    .then(function (res) {
+                        if (!res.ok) throw new Error('Download failed');
+                        var cd = res.headers.get('Content-Disposition');
+                        var name = parseFilenameFromContentDisposition(cd) || ('document.' + (format === 'pdf' ? 'pdf' : 'html'));
+                        return res.blob().then(function (blob) {
+                            return { blob: blob, filename: name };
+                        });
+                    })
+                    .then(function (o) {
+                        var a = document.createElement('a');
+                        a.href = URL.createObjectURL(o.blob);
+                        a.download = o.filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(a.href);
+                    })
+                    .catch(function () {
+                        alert('Could not download ' + (format === 'pdf' ? 'PDF' : 'HTML') + '.');
+                    });
+            }
+
+            function wireDownloadButtons(docId, report) {
+                var btnHtml = document.getElementById('downloadHtmlBtn');
+                var btnPdf = document.getElementById('downloadPdfBtn');
+                if (btnHtml) {
+                    btnHtml.onclick = function () {
+                        downloadRemediated('html', docId);
+                    };
+                }
+                if (btnPdf) {
+                    var hasPdf = report && report.remediated_pdf_available;
+                    btnPdf.disabled = !hasPdf;
+                    btnPdf.title = hasPdf
+                        ? 'Download remediated PDF'
+                        : 'Remediated PDF is not generated for this document yet';
+                    btnPdf.onclick = function () {
+                        if (!btnPdf.disabled) {
+                            downloadRemediated('pdf', docId);
+                        }
+                    };
+                }
+            }
+
+            function showServerViewerChrome() {
+                var dlActions = document.getElementById('serverDownloadActions');
+                var vHint = document.getElementById('viewerHint');
+                if (dlActions) dlActions.hidden = false;
+                if (vHint) vHint.hidden = false;
             }
 
             function openDB() {
@@ -190,6 +275,7 @@
                 var h = authHeaders();
                 if (!h['Authorization']) {
                     placeholder.textContent = 'Sign in to view this document.';
+                    wireDownloadButtons(docId, null);
                     return;
                 }
                 var base = API_BASE + '/alteredDocuments/' + encodeURIComponent(docId);
@@ -232,16 +318,16 @@
                             statusEl.classList.toggle('is-non-compliant', bad);
                         }
                         populateReportSidebar(report);
+                        wireDownloadButtons(docId, report);
                     })
                     .catch(function () {
                         placeholder.textContent = 'Could not load document from server.';
+                        wireDownloadButtons(docId, null);
                     });
             }
 
-            var params = new URLSearchParams(window.location.search);
-            var serverId = params.get('id');
-
             if (serverId && apiReady()) {
+                showServerViewerChrome();
                 loadFromServer(serverId);
             } else {
                 getViewerDoc().then(function (doc) {
