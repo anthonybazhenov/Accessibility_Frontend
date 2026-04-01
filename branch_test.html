@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Documents - City of Oakland</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
+    <script src="backend.js"></script>
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <div class="top-bar">
+        <button type="button" class="high-contrast-toggle" id="highContrastToggle" aria-pressed="false">High Contrast</button>
+    </div>
+
+    <header class="main-header">
+        <div class="header-brand">
+            <img src="assets/oakland_logo.png" alt="City of Oakland" class="header-logo">
+        </div>
+        <div class="header-actions">
+            <span class="account-name"><span class="visually-hidden">Logged in as: </span>Test Test</span>
+            <button type="button" class="icon-btn" aria-label="Menu" title="Menu">
+                <svg aria-hidden="true" focusable="false" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <a href="index.html" class="icon-btn" aria-label="Logout" title="Logout">
+                <svg aria-hidden="true" focusable="false" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </a>
+        </div>
+    </header>
+
+    <main class="documents-main" id="main-content">
+        <div class="documents-bar">
+            <h1 class="documents-title">Your Documents</h1>
+            <div class="documents-actions">
+                <input type="file" id="fileUpload" accept=".pdf,.doc,.docx" multiple hidden>
+                <button type="button" class="icon-btn icon-btn-add" id="addDocBtn" aria-label="Upload document" title="Upload document">
+                    <svg aria-hidden="true" focusable="false" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <button type="button" class="icon-btn icon-btn-trash" id="deleteDocBtn" aria-label="Delete selected" title="Delete selected">
+                    <svg aria-hidden="true" focusable="false" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="documents-table-wrap">
+            <table class="documents-table">
+                <caption class="visually-hidden">Your uploaded documents</caption>
+                <thead>
+                    <tr>
+                        <th class="th-select" scope="col"><input type="checkbox" id="selectAll" aria-label="Select all"></th>
+                        <th scope="col">Document Name</th>
+                        <th scope="col">Date Added</th>
+                        <th scope="col">Size</th>
+                        <th scope="col">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="documentsBody">
+                    <!-- Empty initially; rows added when user uploads -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        var fileInput = document.getElementById('fileUpload');
+        var addBtn = document.getElementById('addDocBtn');
+        var tbody = document.getElementById('documentsBody');
+        var selectAll = document.getElementById('selectAll');
+        var nextDocId = 0;
+        var idToFile = {};
+
+        var DB_NAME = 'ASL_Documents';
+        var STORE_NAME = 'documents';
+        var VIEWER_STORE = 'viewer';
+
+        function openDB() {
+            return new Promise(function (resolve, reject) {
+                var r = indexedDB.open(DB_NAME, 2);
+                r.onerror = function () { reject(r.error); };
+                r.onsuccess = function () { resolve(r.result); };
+                r.onupgradeneeded = function () {
+                    var db = r.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains(VIEWER_STORE)) {
+                        db.createObjectStore(VIEWER_STORE, { keyPath: 'id' });
+                    }
+                };
+            });
+        }
+
+        // Save the document the user wants to view so the viewer
+        // page can load it after navigation.
+        function setViewerDoc(name, blob) {
+            return openDB().then(function (db) {
+                return new Promise(function (resolve, reject) {
+                    var tx = db.transaction(VIEWER_STORE, 'readwrite');
+                    tx.objectStore(VIEWER_STORE).put({ id: 'current', name: name, blob: blob });
+                    tx.oncomplete = function () { resolve(); };
+                    tx.onerror = function () { reject(tx.error); };
+                });
+            });
+        }
+
+        function saveDocToDB(id, name, size, dateStr, blob) {
+            return openDB().then(function (db) {
+                return new Promise(function (resolve, reject) {
+                    var tx = db.transaction(STORE_NAME, 'readwrite');
+                    var store = tx.objectStore(STORE_NAME);
+                    store.put({ id: id, name: name, size: size, dateAdded: dateStr, blob: blob });
+                    tx.oncomplete = function () { resolve(); };
+                    tx.onerror = function () { reject(tx.error); };
+                });
+            });
+        }
+
+        function deleteDocFromDB(id) {
+            return openDB().then(function (db) {
+                return new Promise(function (resolve, reject) {
+                    var tx = db.transaction(STORE_NAME, 'readwrite');
+                    tx.objectStore(STORE_NAME).delete(id);
+                    tx.oncomplete = function () { resolve(); };
+                    tx.onerror = function () { reject(tx.error); };
+                });
+            });
+        }
+
+        function loadDocsFromDB() {
+            return openDB().then(function (db) {
+                return new Promise(function (resolve, reject) {
+                    var tx = db.transaction(STORE_NAME, 'readonly');
+                    var req = tx.objectStore(STORE_NAME).getAll();
+                    req.onsuccess = function () { resolve(req.result || []); };
+                    req.onerror = function () { reject(req.error); };
+                });
+            });
+        }
+
+        function formatSize(size) {
+            return size < 1024 ? size + ' B' : size < 1024 * 1024 ? (size / 1024).toFixed(1) + ' KB' : (size / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function formatDate(now) {
+            return (now.getMonth() + 1) + '/' + now.getDate() + '/' + String(now.getFullYear()).slice(-2) + ' ' + (now.getHours() % 12 || 12) + ':' + String(now.getMinutes()).padStart(2, '0') + (now.getHours() >= 12 ? 'pm' : 'am');
+        }
+
+        function addRow(id, name, sizeStr, dateStr, blobOrFile) {
+            idToFile[id] = blobOrFile;
+            var tr = document.createElement('tr');
+            tr.setAttribute('data-doc-id', id);
+            var status = getComplianceStatus(name);
+            var statusClass = status === 'Non-Compliant' ? ' is-non-compliant' : '';
+            var safeNameForText = escapeHtml(name);
+            var safeNameForAttr = escapeAttr(name);
+            tr.innerHTML = '<td class="td-select"><input type="checkbox" class="doc-checkbox" aria-label="Select ' + safeNameForAttr + '"></td><td><a href="javascript:void(0)" class="doc-open-link" data-doc-id="' + id + '" aria-label="Open ' + safeNameForAttr + '">' + safeNameForText + '</a></td><td>' + dateStr + '</td><td>' + sizeStr + '</td><td><span class="doc-status-badge' + statusClass + '">' + status + '</span></td>';
+            tbody.appendChild(tr);
+            updateSelectAllState();
+        }
+
+        function updateSelectAllState() {
+            var checkboxes = tbody.querySelectorAll('.doc-checkbox');
+            var checked = tbody.querySelectorAll('.doc-checkbox:checked');
+            var total = checkboxes.length;
+            var selected = checked.length;
+
+            if (total === 0) {
+                selectAll.checked = false;
+                selectAll.indeterminate = false;
+                return;
+            }
+
+            selectAll.checked = selected === total;
+            selectAll.indeterminate = selected > 0 && selected < total;
+        }
+
+        function getComplianceStatus(name) {
+            if (!name) return 'Compliant';
+            return /sample2|non[- ]?compliant|fail/i.test(name) ? 'Non-Compliant' : 'Compliant';
+        }
+
+        function escapeHtml(s) {
+            var div = document.createElement('div');
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        function escapeAttr(s) {
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        loadDocsFromDB().then(function (docs) {
+            docs.forEach(function (d) {
+                if (d.id >= nextDocId) nextDocId = d.id + 1;
+                addRow(d.id, d.name, formatSize(d.size), d.dateAdded, d.blob);
+            });
+        }).catch(function (err) {
+            console.error('Could not load saved documents:', err);
+        });
+
+        addBtn.addEventListener('click', function () {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', function () {
+            var files = fileInput.files;
+            if (!files.length) return;
+            for (var i = 0; i < files.length; i++) {
+                var f = files[i];
+                var id = nextDocId++;
+                var name = f.name;
+                var size = f.size;
+                var sizeStr = formatSize(size);
+                var now = new Date();
+                var dateStr = formatDate(now);
+                addRow(id, name, sizeStr, dateStr, f);
+                saveDocToDB(id, name, size, dateStr, f).catch(function (e) {
+                    console.error('Could not save document to storage:', e);
+                });
+            }
+            fileInput.value = '';
+        });
+
+        tbody.addEventListener('click', function (e) {
+            var link = e.target.closest('.doc-open-link');
+            if (!link) return;
+            e.preventDefault();
+            var id = parseInt(link.getAttribute('data-doc-id'), 10);
+            var file = idToFile[id];
+            if (!file) return;
+            // Persist the file so the viewer page can load it,
+            // and navigate in the same tab.
+            setViewerDoc(file.name, file).then(function () {
+                window.location.href = 'document.html';
+            }).catch(function (err) {
+                console.error('Could not open document:', err);
+            });
+        });
+
+        document.getElementById('selectAll').addEventListener('change', function () {
+            var check = this.checked;
+            tbody.querySelectorAll('.doc-checkbox').forEach(function (cb) { cb.checked = check; });
+            updateSelectAllState();
+        });
+
+        tbody.addEventListener('change', function (e) {
+            if (e.target && e.target.classList.contains('doc-checkbox')) {
+                updateSelectAllState();
+            }
+        });
+
+        document.getElementById('deleteDocBtn').addEventListener('click', function () {
+            var selected = tbody.querySelectorAll('tr');
+            var toRemove = [];
+            selected.forEach(function (tr) {
+                var cb = tr.querySelector('.doc-checkbox');
+                if (cb && cb.checked) toRemove.push(tr);
+            });
+            toRemove.forEach(function (tr) {
+                var id = tr.getAttribute('data-doc-id');
+                if (id != null) {
+                    var numId = parseInt(id, 10);
+                    delete idToFile[numId];
+                    deleteDocFromDB(numId).catch(function (e) {
+                        console.error('Could not remove document from storage:', e);
+                    });
+                }
+                tr.remove();
+            });
+            updateSelectAllState();
+        });
+    </script>
+    <script>
+        (function () {
+            var toggle = document.getElementById('highContrastToggle');
+            var key = 'highContrast';
+            function apply() {
+                var on = localStorage.getItem(key) === 'true';
+                document.body.classList.toggle('high-contrast-mode', on);
+                document.documentElement.classList.toggle('high-contrast-mode', on);
+                if (toggle) toggle.setAttribute('aria-pressed', on);
+                if (toggle) toggle.textContent = on ? 'Default' : 'High Contrast';
+            }
+            if (toggle) {
+                toggle.addEventListener('click', function () {
+                    var on = localStorage.getItem(key) !== 'true';
+                    localStorage.setItem(key, on ? 'true' : 'false');
+                    apply();
+                });
+            }
+            apply();
+        })();
+    </script>
+</body>
+</html>
