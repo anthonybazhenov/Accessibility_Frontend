@@ -143,6 +143,7 @@
                 if (doc && doc.blob) {
                     if (doc.name && titleEl) {
                         titleEl.textContent = doc.name;
+                        titleEl.setAttribute('aria-label', 'Open ' + doc.name);
                     }
                     if (statusEl) {
                         var status = getComplianceStatus(doc.name);
