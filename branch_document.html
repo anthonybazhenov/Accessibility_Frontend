@@ -19,18 +19,9 @@
             <a href="test.html" class="doc-back-link" aria-label="Back to documents" title="Back to documents">
                 <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
             </a>
-            <h1 class="document-title-heading"><span id="docTitle" class="document-header-title">Document</span></h1>
-            <div class="document-header-actions-wrap">
-                <div class="document-header-actions" id="serverDownloadActions" hidden>
-                    <button type="button" class="doc-download-btn" id="downloadHtmlBtn">Download HTML</button>
-                    <button type="button" class="doc-download-btn doc-download-btn-secondary" id="downloadPdfBtn" disabled title="Remediated PDF is not generated for this document yet">Download PDF</button>
-                </div>
-                <span id="docStatus" class="doc-status-badge" role="status" aria-live="polite">Status: —</span>
-            </div>
+            <h1 class="document-title-heading"><a href="javascript:void(0)" id="docTitle" class="document-header-title doc-file-link">Document</a></h1>
+            <span id="docStatus" class="doc-status-badge" role="status" aria-live="polite">Status: Compliant</span>
         </div>
-        <p class="document-viewer-hint" id="viewerHint" hidden>
-            This view shows semantic HTML built from your PDF (text and images). It is not a pixel-perfect copy of the original layout. Green highlights mark remediated blocks. OpenAI affects image descriptions, not body text layout.
-        </p>
         <div class="document-viewer-shell">
             <div class="document-layout">
                 <div class="document-card">
@@ -40,35 +31,24 @@
                     </div>
                 </div>
 
-                <aside class="document-sidebar" aria-label="Remediation report">
-                    <div class="panel alterations-panel">
+                <aside class="document-sidebar" aria-label="Accessibility comments">
+                    <div class="panel ai-panel">
                         <div class="panel-header">
                             <span class="status-circle status-green" aria-hidden="true"></span>
-                            <h2 class="panel-title">What was altered</h2>
+                            <h2 class="panel-title">Tweaked by AI</h2>
                         </div>
-                        <p class="alterations-hint">Green in the document marks remediated blocks (figures, headings, paragraphs).</p>
-                        <ul class="issue-list" id="alterationsList">
-                            <li class="issue-item alteration-item">Loading…</li>
+                        <ul class="issue-list" id="aiIssues">
+                            <li class="issue-item"><span class="visually-hidden">Auto-fixed: </span>Contrast improved for headings</li>
                         </ul>
                     </div>
 
                     <div class="panel manual-panel">
                         <div class="panel-header">
                             <span class="status-circle status-yellow" aria-hidden="true"></span>
-                            <h2 class="panel-title">Outstanding issues</h2>
+                            <h2 class="panel-title">Needs manual tweaking</h2>
                         </div>
                         <ul class="issue-list" id="manualIssues">
-                            <li class="issue-item">—</li>
-                        </ul>
-                    </div>
-
-                    <div class="panel ai-panel">
-                        <div class="panel-header">
-                            <span class="status-circle status-green" aria-hidden="true"></span>
-                            <h2 class="panel-title">Warnings &amp; notes</h2>
-                        </div>
-                        <ul class="issue-list" id="aiIssues">
-                            <li class="issue-item">—</li>
+                            <li class="issue-item"><span class="visually-hidden">Action needed: </span>Add descriptive alt text for images</li>
                         </ul>
                     </div>
                 </aside>
@@ -78,30 +58,6 @@
 
     <script>
         (function () {
-            if (typeof API_BASE === 'undefined' || !API_BASE || API_BASE === 'https://your-backend-url') return;
-            var params = new URLSearchParams(window.location.search);
-            if (!params.get('id')) return;
-            consumeJwtFromUrlHash();
-            var h = typeof authHeaders === 'function' ? authHeaders() : {};
-            if (!h['Authorization']) {
-                window.location.href = 'index.html?auth=failed';
-                return;
-            }
-            fetch(API_BASE + '/api/person/jwt', { credentials: 'include', headers: h })
-                .then(function (res) {
-                    if (!res.ok) window.location.href = 'index.html?auth=failed';
-                })
-                .catch(function () {
-                    window.location.href = 'index.html?auth=failed';
-                });
-        })();
-    </script>
-    <script>
-        /* Local-only viewer (no ?id=): load blob from IndexedDB. Server-backed docs are handled in backend.js only. */
-        (function () {
-            var params = new URLSearchParams(window.location.search);
-            if (params.get('id')) return;
-
             var placeholder = document.getElementById('placeholder');
             var frame = document.getElementById('docFrame');
             var titleEl = document.getElementById('docTitle');
@@ -150,14 +106,17 @@
                         statusEl.textContent = 'Status: ' + status;
                         statusEl.classList.toggle('is-non-compliant', status === 'Non-Compliant');
                     }
+                    // Hide built-in PDF chrome where supported so the page
+                    // looks like a clean document inside the card.
                     var baseUrl = URL.createObjectURL(doc.blob);
                     var viewerUrl = baseUrl + '#toolbar=0&navpanes=0&scrollbar=0';
-                    if (frame) frame.src = viewerUrl;
-                    if (frame) frame.style.display = 'block';
-                    if (placeholder) placeholder.style.display = 'none';
+                    titleEl.href = viewerUrl;
+                    frame.src = viewerUrl;
+                    frame.style.display = 'block';
+                    placeholder.style.display = 'none';
                 }
             }).catch(function () {
-                if (placeholder) placeholder.textContent = 'Could not load document.';
+                placeholder.textContent = 'Could not load document.';
             });
         })();
     </script>

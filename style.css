@@ -556,7 +556,6 @@ body.high-contrast-mode .test-box button:hover {
 }
 
 .doc-status-badge {
-    margin-left: auto;
     padding: 0.35rem 0.75rem;
     border: 2px solid #1f7f2c;
     color: #1f7f2c;
@@ -567,6 +566,88 @@ body.high-contrast-mode .test-box button:hover {
 .doc-status-badge.is-non-compliant {
     border-color: #d10000;
     color: #d10000;
+}
+
+.document-header-actions-wrap {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.document-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.doc-download-btn {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    border: 1px solid #1B7A4A;
+    background: #1B7A4A;
+    color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.doc-download-btn:hover:not(:disabled) {
+    background: #145a32;
+    border-color: #145a32;
+}
+
+.doc-download-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.doc-download-btn-secondary {
+    background: #fff;
+    color: #1B7A4A;
+}
+
+.doc-download-btn-secondary:hover:not(:disabled) {
+    background: #e8f5e9;
+}
+
+.document-viewer-hint {
+    margin: 0 1.5rem 0.75rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    color: #444;
+    background: #ebebeb;
+    border-left: 3px solid #1B7A4A;
+    line-height: 1.45;
+}
+
+.alterations-hint {
+    margin: 0 0 0.65rem 0;
+    font-size: 0.82rem;
+    color: #444;
+    line-height: 1.35;
+}
+
+.alterations-panel .alteration-item {
+    border-color: #5a9d4a;
+    background: #f0f9eb;
+}
+
+.issue-item.issue-severity-error {
+    border-color: #c0392b;
+    background: #fdf2f0;
+}
+
+.issue-item.issue-severity-warning {
+    border-color: #b8860b;
+    background: #fffbf0;
+}
+
+.issue-item.issue-severity-info {
+    border-color: #6c757d;
+    background: #f8f9fa;
 }
 
 /* Layout for the document viewer and sidebar comments */
