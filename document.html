@@ -14,7 +14,7 @@
         <button type="button" class="high-contrast-toggle" id="highContrastToggle" aria-pressed="false">High Contrast</button>
     </div>
 
-    <main class="documents-main" id="main-content">
+    <main class="documents-main document-viewer-page" id="main-content">
         <div class="document-header-bar">
             <a href="test.html" class="doc-back-link" aria-label="Back to documents" title="Back to documents">
                 <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -28,9 +28,6 @@
                 <span id="docStatus" class="doc-status-badge" role="status" aria-live="polite">Status: —</span>
             </div>
         </div>
-        <p class="document-viewer-hint" id="viewerHint" hidden>
-            This view shows semantic HTML built from your PDF (text and images). It is not a pixel-perfect copy of the original layout. Green highlights mark remediated blocks. OpenAI affects image descriptions, not body text layout.
-        </p>
         <div class="document-viewer-shell">
             <div class="document-layout">
                 <div class="document-card">
@@ -40,13 +37,12 @@
                     </div>
                 </div>
 
-                <aside class="document-sidebar" aria-label="Remediation report">
+                <aside class="document-sidebar" aria-label="Accessibility summary">
                     <div class="panel alterations-panel">
                         <div class="panel-header">
                             <span class="status-circle status-green" aria-hidden="true"></span>
-                            <h2 class="panel-title">What was altered</h2>
+                            <h2 class="panel-title">What we changed</h2>
                         </div>
-                        <p class="alterations-hint">Green in the document marks remediated blocks (figures, headings, paragraphs).</p>
                         <ul class="issue-list" id="alterationsList">
                             <li class="issue-item alteration-item">Loading…</li>
                         </ul>
@@ -55,7 +51,7 @@
                     <div class="panel manual-panel">
                         <div class="panel-header">
                             <span class="status-circle status-yellow" aria-hidden="true"></span>
-                            <h2 class="panel-title">Outstanding issues</h2>
+                            <h2 class="panel-title">Needs your attention</h2>
                         </div>
                         <ul class="issue-list" id="manualIssues">
                             <li class="issue-item">—</li>
@@ -65,7 +61,7 @@
                     <div class="panel ai-panel">
                         <div class="panel-header">
                             <span class="status-circle status-green" aria-hidden="true"></span>
-                            <h2 class="panel-title">Warnings &amp; notes</h2>
+                            <h2 class="panel-title">Notes from the assistant</h2>
                         </div>
                         <ul class="issue-list" id="aiIssues">
                             <li class="issue-item">—</li>

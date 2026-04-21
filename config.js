@@ -37,12 +37,32 @@ function setStoredJwt(token) {
     } catch (e) {}
 }
 
+var ASL_USERNAME_KEY = 'asl_username';
+
 function clearStoredJwt() {
     jwtMemoryFallback = null;
     try {
         sessionStorage.removeItem(JWT_KEY);
         localStorage.removeItem(JWT_KEY);
+        localStorage.removeItem(ASL_USERNAME_KEY);
     } catch (e) {}
+}
+
+/** Read username from JWT payload (subject) when the profile API is unavailable. */
+function usernameFromJwtToken(token) {
+    if (!token || typeof token !== 'string') return '';
+    try {
+        var parts = token.split('.');
+        if (parts.length < 2) return '';
+        var json = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        var pad = json.length % 4;
+        if (pad) json += new Array(5 - pad).join('=');
+        var payload = JSON.parse(atob(json));
+        var sub = payload.sub || payload.username || '';
+        return typeof sub === 'string' ? sub : '';
+    } catch (e) {
+        return '';
+    }
 }
 
 function authHeaders() {

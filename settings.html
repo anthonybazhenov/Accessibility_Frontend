@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - City of Oakland</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
+    <script src="backend.js"></script>
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <div class="top-bar">
+        <button type="button" class="high-contrast-toggle" id="highContrastToggle" aria-pressed="false">High Contrast</button>
+    </div>
+
+    <header class="main-header">
+        <div class="header-brand">
+            <img src="assets/oakland_logo.png" alt="City of Oakland" class="header-logo">
+        </div>
+        <div class="header-actions">
+            <span class="account-name" id="accountNameDisplay"><span class="visually-hidden">Logged in as: </span><span id="accountNameText">—</span></span>
+            <a href="settings.html" class="icon-btn" aria-label="Settings" title="Settings" aria-current="page">
+                <svg aria-hidden="true" focusable="false" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </a>
+            <a href="index.html" class="icon-btn" aria-label="Logout" title="Logout" onclick="if (typeof clearStoredJwt === 'function') clearStoredJwt();">
+                <svg aria-hidden="true" focusable="false" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </a>
+        </div>
+    </header>
+
+    <main class="documents-main" id="main-content">
+        <div class="documents-bar documents-bar-settings">
+            <div class="documents-bar-leading">
+                <a href="test.html" class="doc-back-link" aria-label="Back to documents" title="Back to documents">
+                    <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                </a>
+                <h1 class="documents-title">Settings</h1>
+            </div>
+        </div>
+
+        <div class="document-viewer-shell settings-viewer-shell">
+            <div class="document-layout settings-page-layout">
+                <aside class="document-sidebar settings-nav-sidebar" aria-label="Settings sections">
+                    <nav class="settings-nav-card" aria-label="Choose a section">
+                        <ul class="settings-nav-list">
+                            <li><button type="button" class="settings-nav-btn doc-download-btn is-active" id="settingsNavAccount" data-settings-panel="account" aria-controls="panel-account" aria-selected="true">Account</button></li>
+                            <li><button type="button" class="settings-nav-btn doc-download-btn doc-download-btn-secondary" id="settingsNavAccessibility" data-settings-panel="accessibility" aria-controls="panel-accessibility" aria-selected="false">Accessibility</button></li>
+                        </ul>
+                    </nav>
+                </aside>
+
+                <div class="document-card settings-content-card">
+                    <section id="panel-account" class="settings-panel" role="tabpanel" aria-labelledby="settingsNavAccount">
+                        <div class="panel settings-inner-panel">
+                            <div class="panel-header">
+                                <span class="status-circle status-green" aria-hidden="true"></span>
+                                <h2 class="panel-title">Account</h2>
+                            </div>
+                            <p class="settings-lede">Update your sign-in details. Leave password blank to keep your current password.</p>
+                            <form id="accountForm" class="settings-form" novalidate>
+                                <div class="form-group">
+                                    <label for="settingsUsername">Username</label>
+                                    <input type="text" id="settingsUsername" name="username" autocomplete="username" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="settingsEmail">Email</label>
+                                    <input type="email" id="settingsEmail" name="email" autocomplete="email" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="settingsNewPassword">New password</label>
+                                    <input type="password" id="settingsNewPassword" name="newPassword" autocomplete="new-password" placeholder="Leave blank to keep current password">
+                                </div>
+                                <div class="form-group">
+                                    <label for="settingsConfirmPassword">Confirm new password</label>
+                                    <input type="password" id="settingsConfirmPassword" name="confirmPassword" autocomplete="new-password" placeholder="Repeat new password">
+                                </div>
+                                <p id="accountFormStatus" class="settings-status" role="status" aria-live="polite"></p>
+                                <button type="submit" class="doc-download-btn settings-form-submit">Save changes</button>
+                            </form>
+                        </div>
+                    </section>
+
+                    <section id="panel-accessibility" class="settings-panel" role="tabpanel" aria-labelledby="settingsNavAccessibility" hidden>
+                        <div class="panel settings-inner-panel">
+                            <div class="panel-header">
+                                <span class="status-circle status-yellow" aria-hidden="true"></span>
+                                <h2 class="panel-title">Accessibility</h2>
+                            </div>
+                            <p class="settings-lede">Adjust how the site looks. More options may be added here later.</p>
+                            <div class="settings-field">
+                                <label class="settings-checkbox-label">
+                                    <input type="checkbox" id="settingsHighContrast" aria-describedby="hcHint">
+                                    <span>High contrast mode</span>
+                                </label>
+                                <p id="hcHint" class="settings-hint alterations-hint">Increases contrast across pages. You can also use the button in the top green bar.</p>
+                            </div>
+                            <div class="settings-placeholder" aria-label="Additional options">
+                                <p class="settings-placeholder-title">More coming soon</p>
+                                <p class="settings-hint">Font size, motion, and other display preferences may appear here in a future update.</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        (function () {
+            if (typeof API_BASE === 'undefined' || !API_BASE || API_BASE === 'https://your-backend-url') return;
+            consumeJwtFromUrlHash();
+            var h = typeof authHeaders === 'function' ? authHeaders() : {};
+            if (!h['Authorization']) {
+                window.location.href = 'index.html?auth=failed';
+                return;
+            }
+            fetch(API_BASE + '/api/person/jwt', {
+                credentials: 'include',
+                headers: h
+            })
+                .then(function (res) {
+                    if (!res.ok) {
+                        window.location.href = 'index.html?auth=failed';
+                    }
+                })
+                .catch(function () {
+                    window.location.href = 'index.html?auth=failed';
+                });
+        })();
+    </script>
+    <script>
+        (function () {
+            var toggle = document.getElementById('highContrastToggle');
+            var key = 'highContrast';
+            function apply() {
+                var on = localStorage.getItem(key) === 'true';
+                document.body.classList.toggle('high-contrast-mode', on);
+                document.documentElement.classList.toggle('high-contrast-mode', on);
+                if (toggle) toggle.setAttribute('aria-pressed', on);
+                if (toggle) toggle.textContent = on ? 'Default' : 'High Contrast';
+                var cb = document.getElementById('settingsHighContrast');
+                if (cb) cb.checked = on;
+            }
+            if (toggle) {
+                toggle.addEventListener('click', function () {
+                    var on = localStorage.getItem(key) !== 'true';
+                    localStorage.setItem(key, on ? 'true' : 'false');
+                    apply();
+                });
+            }
+            var cb = document.getElementById('settingsHighContrast');
+            if (cb) {
+                cb.addEventListener('change', function () {
+                    localStorage.setItem(key, cb.checked ? 'true' : 'false');
+                    apply();
+                });
+            }
+            apply();
+        })();
+    </script>
+</body>
+</html>

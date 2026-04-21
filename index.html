@@ -27,6 +27,7 @@
         <div class="login-container">
             <div class="login-box">
                 <h1>Login</h1>
+                <p id="loginBanner" class="form-success" style="display:none;" aria-live="polite"></p>
                 <form id="loginForm">
                     <div class="form-group">
                         <label for="username">Username</label>
@@ -39,8 +40,8 @@
                     <p id="loginFormError" class="form-error" aria-live="polite"></p>
                     <button type="submit">Login</button>
                 </form>
-                <p class="form-footer form-hint">
-                    Test login: <strong>test</strong> / <strong>test</strong>
+                <p class="form-footer">
+                    <a href="forgot-password.html">Forgot password?</a>
                 </p>
                 <p class="form-footer">
                     Don't have an account? <a href="register.html">Register</a>
@@ -50,45 +51,21 @@
     </main>
 
     <script>
-        // Temporary test login (remove when real auth is added)
-        const TEST_USERNAME = 'test';
-        const TEST_PASSWORD = 'test';
-
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
-            const usernameInput = document.getElementById('username');
-            const passwordInput = document.getElementById('password');
-            const errorEl = document.getElementById('loginFormError');
-
-            function showError(message) {
-                errorEl.textContent = message;
-            }
-
-            function clearError() {
-                errorEl.textContent = '';
-            }
-
-            usernameInput.setAttribute('aria-invalid', 'false');
-            passwordInput.setAttribute('aria-invalid', 'false');
-
-            if (!username || !password) {
-                showError('Please enter both username and password.');
-                if (!username) usernameInput.setAttribute('aria-invalid', 'true');
-                if (!password) passwordInput.setAttribute('aria-invalid', 'true');
-                return;
-            }
-
-            if (username === TEST_USERNAME && password === TEST_PASSWORD) {
-                clearError();
-                window.location.href = 'test.html';
-            } else {
-                showError('Invalid username or password.');
-                usernameInput.setAttribute('aria-invalid', 'true');
-                passwordInput.setAttribute('aria-invalid', 'true');
-            }
-        });
+        (function () {
+            try {
+                var q = new URLSearchParams(window.location.search);
+                if (q.get('reset') === 'ok') {
+                    var b = document.getElementById('loginBanner');
+                    if (b) {
+                        b.textContent = 'Password updated. You can sign in.';
+                        b.style.display = 'block';
+                    }
+                    if (window.history && window.history.replaceState) {
+                        window.history.replaceState({}, '', 'index.html');
+                    }
+                }
+            } catch (e) {}
+        })();
     </script>
     <script>
         (function () {

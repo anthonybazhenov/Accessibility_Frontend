@@ -358,7 +358,7 @@
                 alert('Sign in to download.');
                 return;
             }
-            var url = API_BASE + '/alteredDocuments/' + encodeURIComponent(docId) + '/download?format=' + encodeURIComponent(format);
+            var url = API_BASE + '/alteredDocuments/' + encodeURIComponent(docId) + '/download?format=' + encodeURIComponent(format) + (format === 'html' ? '&viewer=false' : '');
             fetch(url, { credentials: 'include', headers: h })
                 .then(function (res) {
                     if (!res.ok) throw new Error('Download failed');
@@ -391,18 +391,55 @@
 
         function showServerViewerChrome() {
             var dlActions = document.getElementById('serverDownloadActions');
-            var vHint = document.getElementById('viewerHint');
             if (dlActions) dlActions.hidden = false;
-            if (vHint) vHint.hidden = false;
         }
 
         function issueLineText(issue) {
-            var text = (issue.issue || issue.evidence || '').trim();
-            var sc = issue.success_criteria || issue.successCriteria;
-            if (sc) text += (text ? ' — ' : '') + sc;
+            var parts = [];
+            var main = (issue.issue || '').trim();
+            if (main) parts.push(main);
+            var sc = (issue.success_criteria || issue.successCriteria || '').trim();
+            if (sc) parts.push(sc);
+            if (!parts.length) {
+                var ev = (issue.evidence || '').trim();
+                if (ev) parts.push(ev);
+            }
+            var text = parts.join(' · ');
             var p = issue.page_number != null ? issue.page_number : issue.pageNumber;
             if (p != null) text += (text ? ' ' : '') + '(page ' + p + ')';
             return text || '—';
+        }
+
+        function issueHoverHelp(issue) {
+            var fix = (issue.fix_steps || issue.fixSteps || '').trim();
+            var ev = (issue.evidence || '').trim();
+            var bits = [];
+            if (ev && ev.indexOf((issue.issue || '')) === -1) bits.push(ev);
+            if (fix) bits.push('What to do: ' + fix);
+            return bits.join(' ');
+        }
+
+        function figureDomIdFromImageId(imageId) {
+            if (!imageId) return '';
+            var safe = String(imageId).replace(/[^a-zA-Z0-9_-]/g, '_');
+            return 'asl-img-' + safe;
+        }
+
+        function scrollToFigureInViewer(imageId) {
+            if (!frame || !imageId) return;
+            var id = figureDomIdFromImageId(imageId);
+            function tryScroll() {
+                try {
+                    var doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+                    if (!doc) return;
+                    var el = doc.getElementById(id);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } catch (e) { /* cross-origin or not ready */ }
+            }
+            tryScroll();
+            if (frame.contentDocument && frame.contentDocument.readyState === 'loading') {
+                frame.addEventListener('load', tryScroll, { once: true });
+            }
         }
 
         function populateAlterations(report) {
@@ -412,7 +449,7 @@
             if (!lines.length) {
                 var li0 = document.createElement('li');
                 li0.className = 'issue-item alteration-item';
-                li0.textContent = 'No alteration summary is available for this document.';
+                li0.textContent = 'No change summary is available for this document.';
                 alterationsList.appendChild(li0);
                 return;
             }
@@ -431,8 +468,8 @@
             populateAlterations(report);
 
             if (!report || !report.issues || !report.issues.length) {
-                aiIssues.innerHTML = '<li class="issue-item">No warnings or notes.</li>';
-                manualIssues.innerHTML = '<li class="issue-item">No outstanding issues.</li>';
+                aiIssues.innerHTML = '<li class="issue-item">No notes from the assistant.</li>';
+                manualIssues.innerHTML = '<li class="issue-item">Nothing that needs your attention.</li>';
                 return;
             }
 
@@ -447,7 +484,27 @@
                 } else if (sev === 'info') {
                     li.classList.add('issue-severity-info');
                 }
-                li.textContent = issueLineText(issue);
+                var line = issueLineText(issue);
+                var hint = issueHoverHelp(issue);
+                if (hint) li.setAttribute('title', hint);
+                var elemRef = issue.element_id || issue.elementId;
+                if (elemRef) {
+                    li.classList.add('issue-jump-link');
+                    li.setAttribute('tabindex', '0');
+                    li.setAttribute('role', 'button');
+                    li.setAttribute('aria-label', line + (hint ? '. ' + hint : '') + ' Jump to picture in document.');
+                    li.textContent = line;
+                    li.addEventListener('click', function () { scrollToFigureInViewer(elemRef); });
+                    li.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            scrollToFigureInViewer(elemRef);
+                        }
+                    });
+                } else {
+                    li.textContent = line;
+                    if (hint) li.setAttribute('title', hint);
+                }
                 if (sev === 'error') {
                     manualIssues.appendChild(li);
                 } else {
@@ -456,10 +513,10 @@
             });
 
             if (!manualIssues.children.length) {
-                manualIssues.innerHTML = '<li class="issue-item">No outstanding issues.</li>';
+                manualIssues.innerHTML = '<li class="issue-item">Nothing that needs your attention.</li>';
             }
             if (!aiIssues.children.length) {
-                aiIssues.innerHTML = '<li class="issue-item">No warnings or notes.</li>';
+                aiIssues.innerHTML = '<li class="issue-item">No notes from the assistant.</li>';
             }
         }
 
@@ -472,9 +529,9 @@
             }
             var base = API_BASE + '/alteredDocuments/' + encodeURIComponent(docId);
             Promise.all([
-                fetch(base + '/download?format=html', { credentials: 'include', headers: h }).then(function (res) {
+                fetch(base + '/download?format=html&viewer=true', { credentials: 'include', headers: h }).then(function (res) {
                     if (!res.ok) throw new Error('Could not load document');
-                    return res.blob();
+                    return res.text();
                 }),
                 fetch(base + '/report', { credentials: 'include', headers: h }).then(function (res) {
                     if (!res.ok) return null;
@@ -482,23 +539,25 @@
                 })
             ])
                 .then(function (results) {
-                    var blob = results[0];
+                    var html = results[0];
                     var report = results[1];
-                    var objectUrl = URL.createObjectURL(blob);
-                    if (frame) frame.src = objectUrl;
+                    if (frame) {
+                        frame.removeAttribute('src');
+                        frame.srcdoc = html;
+                    }
                     if (frame) frame.style.display = 'block';
                     if (placeholder) placeholder.style.display = 'none';
                     if (titleEl && report && report.filename) titleEl.textContent = report.filename;
                     else if (titleEl) titleEl.textContent = 'Document';
                     if (statusEl) {
-                        var label = 'Remediated';
+                        var label = 'Ready';
                         var bad = false;
                         if (report) {
                             if (report.errors > 0) {
-                                label = 'Needs review';
+                                label = 'Needs attention';
                                 bad = true;
                             } else if (report.warnings > 0) {
-                                label = 'Remediated (warnings)';
+                                label = 'Ready — see notes';
                             }
                         }
                         statusEl.textContent = 'Status: ' + label;
@@ -538,16 +597,34 @@
             setLoading(true); hideError();
             fetch(API_BASE + '/authenticate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ username: username, password: password }) })
                 .then(function (res) {
-                    if (!res.ok) return res.text().then(function (text) { throw new Error(text || 'Login failed'); });
+                    if (!res.ok) {
+                        return res.json().then(function (data) {
+                            var err = new Error((data && data.message) ? data.message : 'Login failed');
+                            err.apiError = data && data.error;
+                            throw err;
+                        }).catch(function (e) {
+                            if (e && e.apiError) throw e;
+                            return res.text().then(function (text) { throw new Error(text || 'Login failed'); });
+                        });
+                    }
                     var hdrToken = res.headers.get('X-JWT-Token') || res.headers.get('x-jwt-token');
-                    function finishLogin(token) { if (!token) { setLoading(false); showError('Login succeeded on the server but the browser did not receive a token. Hard-refresh and try again.'); return; } setStoredJwt(token); window.location.href = 'test.html#asl_token=' + encodeURIComponent(token); }
+                    function finishLogin(token) {
+                        if (!token) { setLoading(false); showError('Login succeeded on the server but the browser did not receive a token. Hard-refresh and try again.'); return; }
+                        try { localStorage.setItem('asl_username', username); } catch (e) {}
+                        setStoredJwt(token);
+                        window.location.href = 'test.html#asl_token=' + encodeURIComponent(token);
+                    }
                     return res.clone().json().then(function (data) { var token = hdrToken || (data && (data.token || data.access_token)); finishLogin(token); }).catch(function () { return res.text().then(function (text) { var token = hdrToken; try { var data = JSON.parse(text); if (data && data.token) token = data.token; } catch (e) {} var m = text && text.match(/"token"\s*:\s*"([^"]+)"/); if (m) token = m[1]; finishLogin(token); }); });
                 })
                 .catch(function (err) {
                     setLoading(false);
-                    if (err && err.message && (err.message.toLowerCase().indexOf('invalid') !== -1 || err.message.indexOf('credentials') !== -1)) { showError('Invalid username or password'); }
-                    else if (err && err.message && (err.message.toLowerCase().indexOf('fetch') !== -1 || err.message.toLowerCase().indexOf('load') !== -1 || err.message === 'Failed to fetch')) { showError('Cannot reach server. Check config.js and that the backend is running at ' + API_BASE + '.'); }
-                    else { showError('Login failed. Please try again.'); }
+                    if (err && err.message && (err.message.toLowerCase().indexOf('invalid') !== -1 || err.message.indexOf('credentials') !== -1 || err.apiError === 'INVALID_CREDENTIALS')) {
+                        showError('Invalid username or password');
+                    } else if (err && err.message && (err.message.toLowerCase().indexOf('fetch') !== -1 || err.message.toLowerCase().indexOf('load') !== -1 || err.message === 'Failed to fetch')) {
+                        showError('Cannot reach server. Check config.js and that the backend is running at ' + API_BASE + '.');
+                    } else {
+                        showError((err && err.message) ? err.message : 'Login failed. Please try again.');
+                    }
                 });
 
             function setLoading(loading) { if (submitBtn) { submitBtn.disabled = loading; submitBtn.textContent = loading ? 'Logging in…' : 'Login'; } }
@@ -561,7 +638,7 @@
         var form = document.getElementById(formId);
         if (!form) return;
         var submitBtn = form.querySelector('button[type="submit"]');
-        var errorEl = document.getElementById(opts.errorId || 'registerError');
+        var errorEl = document.getElementById(opts.errorId || 'registerFormError');
 
         form.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -578,8 +655,31 @@
             setLoading(true); hideError();
             var params = new URLSearchParams({ email: email, password: password, name: name, username: username, dob: dobStr });
             fetch(API_BASE + '/api/person/post?' + params.toString(), { method: 'POST', credentials: 'include' })
-                .then(function (res) { if (res.ok) { window.location.href = 'index.html'; } else { return res.text().then(function (text) { throw new Error(text || 'Registration failed'); }); } })
-                .catch(function (err) { setLoading(false); var msg = err && err.message ? err.message : ''; if (msg.toLowerCase().indexOf('fetch') !== -1 || msg.toLowerCase().indexOf('load') !== -1 || msg === 'Failed to fetch') { showError('Cannot reach server. Is the backend running at ' + API_BASE + '? Check config.js.'); } else { showError(msg || 'Registration failed. Please try again.'); } });
+                .then(function (res) {
+                    if (res.ok) {
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                    return res.text().then(function (text) {
+                        try {
+                            var data = JSON.parse(text);
+                            if (data && data.error) throw new Error(data.error);
+                        } catch (e) {
+                            if (e instanceof SyntaxError) throw new Error(text || 'Registration failed');
+                            throw e;
+                        }
+                        throw new Error(text || 'Registration failed');
+                    });
+                })
+                .catch(function (err) {
+                    setLoading(false);
+                    var msg = err && err.message ? err.message : '';
+                    if (msg.toLowerCase().indexOf('fetch') !== -1 || msg.toLowerCase().indexOf('load') !== -1 || msg === 'Failed to fetch') {
+                        showError('Cannot reach server. Is the backend running at ' + API_BASE + '? Check config.js.');
+                    } else {
+                        showError(msg || 'Registration failed. Please try again.');
+                    }
+                });
 
             function setLoading(loading) { if (submitBtn) { submitBtn.disabled = loading; submitBtn.textContent = loading ? 'Creating account…' : 'Create account'; } }
             function showError(msg) { if (errorEl) { errorEl.textContent = msg; errorEl.style.display = 'block'; } }
@@ -587,15 +687,247 @@
         });
     }
 
+    function wireForgotPassword(formId) {
+        var form = document.getElementById(formId);
+        if (!form) return;
+        var submitBtn = form.querySelector('button[type="submit"]');
+        var errorEl = document.getElementById('forgotPasswordError');
+        var okEl = document.getElementById('forgotPasswordOk');
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var email = document.getElementById('forgotEmail');
+            if (!email || !email.value.trim()) { if (errorEl) { errorEl.textContent = 'Enter your email.'; errorEl.style.display = 'block'; } return; }
+            if (!API_BASE || API_BASE === 'https://your-backend-url') { if (errorEl) { errorEl.textContent = 'Configure API_BASE in config.js'; errorEl.style.display = 'block'; } return; }
+            if (errorEl) { errorEl.textContent = ''; errorEl.style.display = 'none'; }
+            if (okEl) okEl.textContent = '';
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Sending…'; }
+            fetch(API_BASE + '/api/person/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ email: email.value.trim() })
+            })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (okEl) okEl.textContent = (data && data.message) ? data.message : 'If an account exists, check your email.';
+                })
+                .catch(function () {
+                    if (errorEl) { errorEl.textContent = 'Request failed. Try again later.'; errorEl.style.display = 'block'; }
+                })
+                .finally(function () { if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Send reset link'; } });
+        });
+    }
+
+    function wireResetPassword(formId) {
+        var form = document.getElementById(formId);
+        if (!form) return;
+        var submitBtn = form.querySelector('button[type="submit"]');
+        var errorEl = document.getElementById('resetPasswordError');
+        var params = new URLSearchParams(window.location.search);
+        var token = params.get('token');
+        if (!token && errorEl) {
+            errorEl.textContent = 'Open this page from the link in your password reset email.';
+            errorEl.style.display = 'block';
+        }
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (!token) return;
+            var p1 = document.getElementById('resetNewPassword');
+            var p2 = document.getElementById('resetConfirmPassword');
+            if (!p1 || !p2) return;
+            if (p1.value.length < 5) { if (errorEl) { errorEl.textContent = 'Password must be at least 5 characters.'; errorEl.style.display = 'block'; } return; }
+            if (p1.value !== p2.value) { if (errorEl) { errorEl.textContent = 'Passwords do not match.'; errorEl.style.display = 'block'; } return; }
+            if (!API_BASE || API_BASE === 'https://your-backend-url') { if (errorEl) { errorEl.textContent = 'Configure API_BASE in config.js'; errorEl.style.display = 'block'; } return; }
+            if (errorEl) { errorEl.textContent = ''; errorEl.style.display = 'none'; }
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving…'; }
+            fetch(API_BASE + '/api/person/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ token: token, password: p1.value })
+            })
+                .then(function (res) {
+                    return res.json().then(function (data) {
+                        if (!res.ok) throw new Error((data && data.error) ? data.error : 'Reset failed');
+                        window.location.href = 'index.html?reset=ok';
+                    });
+                })
+                .catch(function (err) {
+                    if (errorEl) {
+                        errorEl.textContent = err && err.message ? err.message : 'Reset failed.';
+                        errorEl.style.display = 'block';
+                    }
+                })
+                .finally(function () { if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Set new password'; } });
+        });
+    }
+
+    function loadAccountDisplay() {
+        var el = document.getElementById('accountNameText');
+        if (!el) return;
+        function setLabel(text) {
+            if (text) el.textContent = text;
+        }
+        try {
+            var cached = localStorage.getItem('asl_username');
+            if (cached) setLabel(cached);
+        } catch (e) {}
+        var apiReady = typeof API_BASE !== 'undefined' && API_BASE && API_BASE !== 'https://your-backend-url';
+        if (!apiReady) {
+            if (!el.textContent || el.textContent === '—') {
+                var t0 = typeof getStoredJwt === 'function' ? getStoredJwt() : null;
+                var u0 = typeof usernameFromJwtToken === 'function' ? usernameFromJwtToken(t0) : '';
+                if (u0) setLabel(u0);
+            }
+            return;
+        }
+        var h = typeof authHeaders === 'function' ? authHeaders() : {};
+        if (!h['Authorization']) {
+            var t1 = typeof getStoredJwt === 'function' ? getStoredJwt() : null;
+            var u1 = typeof usernameFromJwtToken === 'function' ? usernameFromJwtToken(t1) : '';
+            if (u1) setLabel(u1);
+            return;
+        }
+        fetch(API_BASE + '/api/person/jwt', { credentials: 'include', headers: h })
+            .then(function (res) { if (!res.ok) throw new Error(); return res.json(); })
+            .then(function (person) {
+                var label = (person.username || '').trim();
+                if (label) {
+                    el.textContent = label;
+                    try { localStorage.setItem('asl_username', label); } catch (e) {}
+                }
+            })
+            .catch(function () {
+                var t2 = typeof getStoredJwt === 'function' ? getStoredJwt() : null;
+                var u2 = typeof usernameFromJwtToken === 'function' ? usernameFromJwtToken(t2) : '';
+                if (u2) setLabel(u2);
+            });
+    }
+
+    function wireSettingsPage() {
+        var root = document.querySelector('.settings-page-layout');
+        if (!root) return;
+
+        var navButtons = document.querySelectorAll('.settings-nav-btn');
+        var panels = {
+            account: document.getElementById('panel-account'),
+            accessibility: document.getElementById('panel-accessibility')
+        };
+
+        function showPanel(panelId) {
+            Object.keys(panels).forEach(function (key) {
+                var panel = panels[key];
+                if (!panel) return;
+                if (key === panelId) {
+                    panel.removeAttribute('hidden');
+                } else {
+                    panel.setAttribute('hidden', '');
+                }
+            });
+            navButtons.forEach(function (btn) {
+                var t = btn.getAttribute('data-settings-panel');
+                var active = t === panelId;
+                btn.classList.toggle('is-active', active);
+                btn.classList.toggle('doc-download-btn-secondary', !active);
+                btn.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+        }
+
+        navButtons.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var t = btn.getAttribute('data-settings-panel');
+                if (t) showPanel(t);
+            });
+        });
+
+        var form = document.getElementById('accountForm');
+        if (form) {
+            var h = typeof authHeaders === 'function' ? authHeaders() : {};
+            if (h['Authorization']) {
+                fetch(API_BASE + '/api/person/jwt', { credentials: 'include', headers: h })
+                    .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+                    .then(function (person) {
+                        var u = document.getElementById('settingsUsername');
+                        var e = document.getElementById('settingsEmail');
+                        if (u) u.value = person.username || '';
+                        if (e) e.value = person.email || '';
+                    })
+                    .catch(function () {});
+            }
+            form.addEventListener('submit', function (ev) {
+                ev.preventDefault();
+                var status = document.getElementById('accountFormStatus');
+                var u = document.getElementById('settingsUsername');
+                var e = document.getElementById('settingsEmail');
+                var p1 = document.getElementById('settingsNewPassword');
+                var p2 = document.getElementById('settingsConfirmPassword');
+                if (status) {
+                    status.textContent = '';
+                    status.classList.remove('is-error');
+                }
+                if (!u || !e) return;
+                var pw = p1 && p1.value ? p1.value : '';
+                var pw2 = p2 && p2.value ? p2.value : '';
+                if (pw !== pw2) {
+                    if (status) {
+                        status.textContent = 'New passwords do not match.';
+                        status.classList.add('is-error');
+                    }
+                    return;
+                }
+                var payload = { username: u.value.trim(), email: e.value.trim() };
+                if (pw) payload.password = pw;
+                var headers = typeof authHeaders === 'function' ? authHeaders() : {};
+                headers['Content-Type'] = 'application/json';
+                fetch(API_BASE + '/api/person/self', { method: 'PUT', credentials: 'include', headers: headers, body: JSON.stringify(payload) })
+                    .then(function (res) {
+                        return res.json().then(function (data) {
+                            if (!res.ok) {
+                                var msg = (data && data.error) ? data.error : (typeof data === 'string' ? data : ('HTTP ' + res.status));
+                                throw new Error(msg);
+                            }
+                            return data;
+                        });
+                    })
+                    .then(function (data) {
+                        if (data.token && typeof setStoredJwt === 'function') {
+                            setStoredJwt(data.token);
+                        }
+                        if (p1) p1.value = '';
+                        if (p2) p2.value = '';
+                        if (status) {
+                            status.textContent = 'Saved.';
+                            status.classList.remove('is-error');
+                        }
+                        loadAccountDisplay();
+                    })
+                    .catch(function (err) {
+                        if (status) {
+                            status.textContent = 'Could not save: ' + (err && err.message ? err.message : 'unknown error');
+                            status.classList.add('is-error');
+                        }
+                    });
+            });
+        }
+    }
+
     // Auto-wire known forms and pages
     function init() {
-        // Login/register
+        if (typeof consumeJwtFromUrlHash === 'function') {
+            consumeJwtFromUrlHash();
+        }
+        // Login/register / auth flows
         if (document.getElementById('loginForm')) wireLogin('loginForm');
         if (document.getElementById('registerForm')) wireRegister('registerForm');
+        if (document.getElementById('forgotPasswordForm')) wireForgotPassword('forgotPasswordForm');
+        if (document.getElementById('resetPasswordForm')) wireResetPassword('resetPasswordForm');
         // Dashboard
         if (document.getElementById('fileUpload') && document.getElementById('documentsBody')) wireDashboard();
         // Document viewer
         if (document.getElementById('docFrame') || document.getElementById('placeholder')) wireDocumentViewer();
+        // Settings
+        if (document.querySelector('.settings-page-layout')) wireSettingsPage();
+        loadAccountDisplay();
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();

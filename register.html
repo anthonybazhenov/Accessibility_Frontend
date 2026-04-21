@@ -41,6 +41,10 @@
                         <input type="text" id="username" placeholder="username" autocomplete="username" required>
                     </div>
                     <div class="form-group">
+                        <label for="dob">Date of birth</label>
+                        <input type="date" id="dob" name="dob" required>
+                    </div>
+                    <div class="form-group">
                         <label for="password">Password</label>
                         <input type="password" id="password" placeholder="password" autocomplete="new-password" required>
                     </div>
@@ -58,50 +62,6 @@
         </div>
     </main>
 
-    <script>
-        document.getElementById('registerForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const name = document.getElementById('name');
-            const email = document.getElementById('email');
-            const username = document.getElementById('username');
-            const passwordEl = document.getElementById('password');
-            const confirmPasswordEl = document.getElementById('confirmPassword');
-            const errorEl = document.getElementById('registerFormError');
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-
-            function showError(message) {
-                errorEl.textContent = message;
-            }
-
-            function clearError() {
-                errorEl.textContent = '';
-            }
-
-            [name, email, username, passwordEl, confirmPasswordEl].forEach(function (input) {
-                input.setAttribute('aria-invalid', 'false');
-            });
-
-            if (!name.value.trim() || !email.value.trim() || !username.value.trim() || !password || !confirmPassword) {
-                showError('Please fill out all required fields.');
-                [name, email, username, passwordEl, confirmPasswordEl].forEach(function (input) {
-                    if (!input.value.trim()) input.setAttribute('aria-invalid', 'true');
-                });
-                return;
-            }
-
-            if (password !== confirmPassword) {
-                showError('Passwords do not match.');
-                passwordEl.setAttribute('aria-invalid', 'true');
-                confirmPasswordEl.setAttribute('aria-invalid', 'true');
-                return;
-            }
-
-            // For now, redirect to login after "register"
-            clearError();
-            window.location.href = 'index.html';
-        });
-    </script>
     <script>
         (function () {
             var toggle = document.getElementById('highContrastToggle');

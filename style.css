@@ -89,6 +89,23 @@ html.high-contrast-mode {
     object-fit: contain;
 }
 
+.header-logo-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem;
+    border-radius: 6px;
+    text-decoration: none;
+}
+
+.header-logo-link:hover {
+    background-color: #f0f0f0;
+}
+
+.header-logo-link:focus-visible {
+    outline: 2px solid #0b57d0;
+    outline-offset: 2px;
+}
+
 .header-title {
     display: flex;
     flex-direction: column;
@@ -176,7 +193,10 @@ html.high-contrast-mode {
     color: #222;
 }
 
-.login-box input {
+.login-box input,
+.settings-form input[type="text"],
+.settings-form input[type="email"],
+.settings-form input[type="password"] {
     width: 100%;
     padding: 0.75rem 1rem;
     border: 1px solid #767676;
@@ -186,11 +206,15 @@ html.high-contrast-mode {
     color: #333;
 }
 
-.login-box input::placeholder {
+.login-box input::placeholder,
+.settings-form input::placeholder {
     color: #6b6b6b;
 }
 
-.login-box input:focus {
+.login-box input:focus,
+.settings-form input[type="text"]:focus,
+.settings-form input[type="email"]:focus,
+.settings-form input[type="password"]:focus {
     outline: 2px solid #0b57d0;
     outline-offset: 2px;
     border-color: #1B7A4A;
@@ -200,6 +224,14 @@ html.high-contrast-mode {
     min-height: 1.25rem;
     margin-top: 0.25rem;
     color: #b00020;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.form-success {
+    min-height: 1.25rem;
+    margin-top: 0.25rem;
+    color: #1B7A4A;
     font-weight: 600;
     font-size: 0.9rem;
 }
@@ -317,11 +349,19 @@ html.high-contrast-mode {
 }
 
 .account-name {
-    padding: 0.5rem 0.75rem;
+    display: inline-block;
+    min-width: 6rem;
+    max-width: 16rem;
+    padding: 0.5rem 0.85rem;
     background-color: #e0e0e0;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    color: #333;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #222;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
 }
 
 .icon-btn {
@@ -656,18 +696,48 @@ body.high-contrast-mode .test-box button:hover {
     background-color: #f5f5f5;
 }
 
+/* Document viewer page: fill viewport below top bar; sidebar scrolls independently */
+main.documents-main.document-viewer-page {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+main.documents-main.document-viewer-page .document-header-bar,
+main.documents-main.document-viewer-page .document-viewer-hint {
+    flex-shrink: 0;
+}
+
+main.documents-main.document-viewer-page .document-viewer-shell {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
 .document-layout {
     display: flex;
     gap: 1rem;
     align-items: stretch;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .document-card {
     flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
     background: #e8e8e8;
     border: none;
     border-radius: 14px;
     padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .document-viewer-frame-wrap {
@@ -675,11 +745,17 @@ body.high-contrast-mode .test-box button:hover {
     background-color: #f2f2f2;
     border: 1px solid #b0b0b0;
     padding: 0.6rem;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .document-viewer-frame-wrap iframe {
     width: 100%;
-    height: 70vh;
+    flex: 1;
+    min-height: min(70vh, 100%);
+    height: auto;
     border: none;
     background-color: #fff;
 }
@@ -688,7 +764,8 @@ body.high-contrast-mode .test-box button:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 70vh;
+    flex: 1;
+    min-height: 12rem;
     color: #666;
     font-size: 1rem;
 }
@@ -696,6 +773,10 @@ body.high-contrast-mode .test-box button:hover {
 .document-sidebar {
     width: 320px;
     flex: 0 0 320px;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     background: #e8e8e8;
     border-radius: 14px;
     border: none;
@@ -762,6 +843,8 @@ body.high-contrast-mode .test-box button:hover {
     .document-sidebar {
         width: 100%;
         flex: 0 0 auto;
+        max-height: min(70vh, 32rem);
+        overflow-y: auto;
     }
 }
 
@@ -826,11 +909,245 @@ body.high-contrast-mode .test-box button:hover {
     line-height: 1.35;
 }
 
-@media (max-width: 880px) {
-    .document-sidebar { order: 2; }
+.issue-item.issue-jump-link {
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
 }
 
-body.high-contrast-mode .login-box input:focus {
+.issue-item.issue-jump-link:hover,
+.issue-item.issue-jump-link:focus {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+@media (max-width: 880px) {
+    .document-sidebar { order: 2; }
+    /* Settings: keep section nav above main card (override order: 2 on .document-sidebar) */
+    .settings-page-layout .settings-nav-sidebar.document-sidebar {
+        order: 0;
+    }
+    .settings-page-layout .settings-content-card {
+        order: 1;
+    }
+}
+
+/* Settings — same shell as document viewer (grey bar + viewer shell + sidebar + card + panels) */
+.documents-bar-settings {
+    justify-content: flex-start;
+}
+
+.documents-bar-leading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.documents-bar-settings .documents-title {
+    margin: 0;
+}
+
+.settings-viewer-shell {
+    flex: 1;
+    min-height: calc(100vh - 200px);
+}
+
+.settings-page-layout {
+    align-items: stretch;
+}
+
+.settings-nav-sidebar {
+    width: 260px;
+    flex: 0 0 260px;
+}
+
+.settings-nav-card {
+    width: 100%;
+    background: #efefef;
+    border-radius: 8px;
+    padding: 0.5rem;
+    border: none;
+}
+
+.settings-nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.settings-nav-list li {
+    margin: 0;
+}
+
+.settings-nav-list li + li {
+    margin-top: 0.35rem;
+}
+
+/* Settings section nav: same control style as document Download HTML / PDF */
+.settings-nav-list .settings-nav-btn.doc-download-btn {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+}
+
+.settings-nav-list .settings-nav-btn.doc-download-btn:focus-visible {
+    outline: 2px solid #0b57d0;
+    outline-offset: 2px;
+}
+
+.settings-content-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.settings-content-card .settings-panel[hidden] {
+    display: none !important;
+}
+
+.settings-inner-panel {
+    margin: 0;
+}
+
+.settings-inner-panel .panel-header {
+    margin-bottom: 0.65rem;
+}
+
+.settings-inner-panel .panel-title {
+    font-size: 1.05rem;
+}
+
+.settings-lede {
+    color: #444;
+    margin: 0 0 1rem 0;
+    line-height: 1.45;
+    font-size: 0.9rem;
+}
+
+.settings-form {
+    max-width: 28rem;
+}
+
+.settings-form .form-group {
+    margin-bottom: 1rem;
+}
+
+.settings-form label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+    color: #222;
+    font-size: 0.95rem;
+}
+
+.settings-form .settings-form-submit.doc-download-btn {
+    margin-top: 0.35rem;
+    font-weight: 700;
+}
+
+.settings-status:empty {
+    display: none;
+}
+
+.settings-status {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    color: #1B7A4A;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.settings-status.is-error {
+    color: #b00020;
+}
+
+.settings-field {
+    margin-bottom: 1.25rem;
+}
+
+.settings-checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+.settings-checkbox-label input[type="checkbox"] {
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-top: 0.15rem;
+    flex-shrink: 0;
+}
+
+.settings-hint {
+    font-size: 0.85rem;
+    color: #555;
+    margin: 0.35rem 0 0 0;
+    line-height: 1.35;
+}
+
+.settings-placeholder {
+    margin-top: 1.25rem;
+    padding: 0.85rem 1rem;
+    border: 1px dashed #b0b0b0;
+    border-radius: 8px;
+    background-color: #f2f2f2;
+}
+
+.settings-placeholder-title {
+    font-weight: 700;
+    margin: 0 0 0.35rem 0;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+@media (max-width: 880px) {
+    .settings-nav-sidebar {
+        width: 100%;
+        flex: 0 0 auto;
+    }
+
+    .settings-nav-list {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .settings-nav-list li {
+        flex: 1 1 auto;
+        min-width: 8rem;
+    }
+
+    .settings-nav-list li + li {
+        margin-top: 0;
+    }
+}
+
+body.high-contrast-mode .settings-nav-list .doc-download-btn.is-active {
+    background: #000;
+    border-color: #000;
+    color: #fff;
+}
+
+body.high-contrast-mode .settings-nav-list .doc-download-btn.doc-download-btn-secondary {
+    background: #fff;
+    color: #000;
+    border-color: #000;
+}
+
+body.high-contrast-mode .settings-placeholder {
+    border-color: #000;
+    background: #fff;
+}
+
+body.high-contrast-mode .login-box input:focus,
+body.high-contrast-mode .settings-form input:focus {
     border-color: #000;
 }
 
